@@ -13,6 +13,22 @@ Asistente de nutrición y bienestar que acompaña al usuario mediante WhatsApp y
 
 ---
 
+## Estructura del repositorio
+
+- `/backend`: API Flask + modelos + lógica de IA y WhatsApp.
+- `/frontend`: app móvil Expo/React Native.
+- `docker-compose.yml`: orquestación de backend + Postgres.
+- `README.md`: este archivo (visión general).
+- `backend/README.md`: detalles del backend.
+- `frontend/README.md`: detalles del frontend.
+
+>[!important]
+>Si quieres acceder rapidamente al detalle de como esta construido el BackEnd y el FrontEnd puedes consultar los siguientes enlaces.
+>- [BackEnd](https://github.com/Hackaton-YoungAI-Leaders-Nutri-Scan/victoria/blob/main/backend/README.md)
+>- [FrontEnd](https://github.com/Hackaton-YoungAI-Leaders-Nutri-Scan/victoria/blob/main/frontend/README.md)
+
+---
+
 ## Arquitectura general
 
 - **App móvil (frontend):**
@@ -59,8 +75,9 @@ Asistente de nutrición y bienestar que acompaña al usuario mediante WhatsApp y
 - **Google Cloud Storage** (medios de usuario)
 
 ---
+## Diagramas 
 
-## Diagrama de base de datos
+### Diagrama de base de datos
 
 ```mermaid
 erDiagram
@@ -123,7 +140,7 @@ erDiagram
 
 ---
 
-## Diagrama de tecnologías y protocolos de comunicación
+### Diagrama de tecnologías y protocolos de comunicación
 
 ```mermaid
 flowchart TD
@@ -159,7 +176,7 @@ flowchart TD
 
 ---
 
-## Diagrama de flujo conversacional (Victoria)
+### Diagrama de flujo conversacional (Victoria)
 
 ```mermaid
 flowchart TD
@@ -221,7 +238,9 @@ npm start
 
 ---
 
-## Docker / docker-compose
+## Detalle sobre las tecnologias 
+
+### Docker / docker-compose
 
 En la raíz del proyecto (`victoria`):
 
@@ -235,7 +254,7 @@ Esto levanta:
 
 ---
 
-## WhatsApp Cloud API
+### WhatsApp Cloud API
 
 - Configurar el webhook que apunte a:
   - `https://TU_DOMINIO/api/whatsapp/webhook` o
@@ -247,7 +266,7 @@ Esto levanta:
 
 ---
 
-## IA: Fases de Victoria
+### IA: Fases de Victoria
 
 1. **Perfilamiento (profiling):**
    - Usa datos de `UserProfile` (edad, género, enfermedades, alergias, etc.).
@@ -260,12 +279,3 @@ Esto levanta:
    - Propone micro-hábitos y ajustes realistas.
 
 ---
-
-## Estructura del repo (resumen)
-
-- `/backend`: API Flask + modelos + lógica de IA y WhatsApp.
-- `/frontend`: app móvil Expo/React Native.
-- `docker-compose.yml`: orquestación de backend + Postgres.
-- `README.md`: este archivo (visión general).
-- `backend/README.md`: detalles del backend.
-- `frontend/README.md`: detalles del frontend.
