@@ -12,10 +12,15 @@ from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session, Mappe
 from google.cloud import storage
 from detector_image import detectar_auto
 from detector_audio import transcribir_audio
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.prompts import PromptTemplate
+from langchain.memory import ConversationSummaryBufferMemory
+from langchain.chains import ConversationChain
+from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO)
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://appuser:secret@db:5432/victoria_db")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_engine(DATABASE_URL, echo=False, future=True)
 SessionLocal = scoped_session(sessionmaker(bind=engine, autoflush=False, autocommit=False))
@@ -24,7 +29,57 @@ Base = declarative_base()
 app = Flask(__name__)
 CORS(app)  # CORS básico para permitir peticiones desde el frontend (por defecto permite todos los orígenes)
 
+USER_SESSIONS = {}
 
+## LANGCHAIN CONFIG
+prompt_template = PromptTemplate(
+    input_variables=["input", "history"],
+    template="""
+Eres Nutri-Scan, un asistente experto en nutrición clínica y educación alimentaria.
+Tu tarea es responder mensajes de WhatsApp de forma:
+
+- Breve
+- Clara
+- Amigable
+- Basada en evidencia
+- Sin usar jerga médica innecesaria
+- Sin dar diagnósticos médicos
+
+Historial resumido de la conversación:
+{history}
+
+Mensaje del usuario:
+"{input}"
+"""
+)
+## LANGCHAIN
+
+def get_user_chain(user_id: str) -> ConversationChain:
+    """
+    Devuelve la cadena (LLM + memoria) asociada a un usuario.
+    Si no existe, la crea.
+    """
+    if user_id not in USER_SESSIONS:
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-2.0-flash",
+            temperature=0.7
+        )
+
+        memory = ConversationSummaryBufferMemory(
+            llm=llm,
+            max_token_limit=512,
+            return_messages=True
+        )
+
+        chain = ConversationChain(
+            llm=llm,
+            memory=memory,
+            verbose=False
+        )
+
+        USER_SESSIONS[user_id] = chain
+
+    return USER_SESSIONS.get(user_id)
 
 class WhatsAppMessage(Base):
     __tablename__ = "whatsapp_messages"
@@ -57,17 +112,12 @@ def init_db():
 # Inicializar la base de datos al cargar la aplicación
 init_db()
 
-def build_whatsapp_reply(user_message: str) -> str:
-    """Genera el texto de respuesta para un mensaje de WhatsApp.
+def build_whatsapp_reply(user_message: str, phone: str) -> str:
+    """Genera la respuesta nutricional para WhatsApp usando PromptTemplate."""
+    chain = get_user_chain(phone)
+    response = chain.predict(input=user_message)
 
-    De momento es una respuesta fija, pero aquí podrías conectar tu lógica
-    de Nutri-Scan (modelo, reglas, etc.).
-    """
-
-    return (
-        "Gracias por tu mensaje. Aún no estoy conectado al modelo nutricional, "
-        "pero puedo recibir tu texto y procesarlo más adelante."
-    )
+    return response.strip()
 
 
 def send_whatsapp_message(phone: str, text: str) -> dict:
@@ -268,7 +318,7 @@ def whatsapp_webhook():
 
     if user_message:
         logging.info("[WHATSAPP WEBHOOK] Mensaje de usuario detectado. from=%s body=%s", phone, user_message)
-        reply_text = build_whatsapp_reply(user_message)
+        reply_text = build_whatsapp_reply(user_message, phone)
         db = SessionLocal()
 
         # Guardar mensaje entrante (incluyendo media_url si existe)
@@ -340,7 +390,7 @@ def whatsapp_message():
     phone = data.get("phone")
 
     # Lógica de respuesta reutilizando la misma función que el webhook
-    reply_text = build_whatsapp_reply(user_message)
+    reply_text = build_whatsapp_reply(user_message, phone)
 
     # Guardar mensajes en BD (si hay teléfono)
     if phone:
