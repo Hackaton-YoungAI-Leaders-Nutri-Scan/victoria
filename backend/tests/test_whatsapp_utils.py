@@ -1,4 +1,3 @@
-import pytest
 
 from utils import whatsapp as wa_mod
 from utils.whatsapp import build_whatsapp_reply
@@ -61,14 +60,18 @@ class _FakeChain:
 
 def test_build_whatsapp_reply_calls_chain_with_profiling(monkeypatch):
     """Cuando no hay perfil en DB, debe llamar get_user_chain con stage profiling."""
-
     captured = {}
 
     def fake_sessionlocal():
         # No hay perfil almacenado
         return _FakeSession(profile=None)
 
-    def fake_get_user_chain(user_id, user_profile=None, personality_stage="profiling", personality_profile=None):
+    def fake_get_user_chain(
+        user_id,
+        user_profile=None,
+        personality_stage="profiling",
+        personality_profile=None,
+    ):
         captured["user_id"] = user_id
         captured["user_profile"] = user_profile
         captured["personality_stage"] = personality_stage
@@ -95,14 +98,18 @@ def test_build_whatsapp_reply_calls_chain_with_profiling(monkeypatch):
 
 def test_build_whatsapp_reply_uses_daily_stage_when_profile_daily(monkeypatch):
     """Si el perfil en BD tiene stage 'daily', debe propagarlo a get_user_chain."""
-
     profile_obj = _FakeProfile(stage="daily", personality_profile={"foo": "bar"})
     captured = {}
 
     def fake_sessionlocal():
         return _FakeSession(profile=profile_obj)
 
-    def fake_get_user_chain(user_id, user_profile=None, personality_stage="profiling", personality_profile=None):
+    def fake_get_user_chain(
+        user_id,
+        user_profile=None,
+        personality_stage="profiling",
+        personality_profile=None,
+    ):
         captured["user_id"] = user_id
         captured["user_profile"] = user_profile
         captured["personality_stage"] = personality_stage

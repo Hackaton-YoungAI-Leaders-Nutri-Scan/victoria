@@ -1,11 +1,8 @@
-from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
-from db.db import UserProfile, FoodRegister
+from datetime import datetime
+
 from recomendaciones import REGLAS_POR_ENFERMEDAD
-    
 
-
-
+from db.db import FoodRegister, UserProfile
 
 
 def obtener_consumo_diario(session, user_id: int):
@@ -44,7 +41,6 @@ def obtener_consumo_diario(session, user_id: int):
 
 def recomendaciones_estandar(user: UserProfile):
     """Rangos estándar OMS/FAO para adultos mayores."""
-    
     if user.gender.lower() == "masculino":
         calorias = (2000, 2600)
     else:
@@ -53,14 +49,11 @@ def recomendaciones_estandar(user: UserProfile):
     return {
         "calorias_min": calorias[0],
         "calorias_max": calorias[1],
-
         # General OMS:
         "carbohidratos_min": 130,
         "carbohidratos_max": 300,
-
         "proteinas_min": round(0.8 * user.weight_kg),
         "proteinas_max": round(1.2 * user.weight_kg),
-
         "grasas_max": 70,
         "azucares_max": 25,
         "sal_max": 5,
@@ -68,7 +61,7 @@ def recomendaciones_estandar(user: UserProfile):
 
 
 # -------------------------------
-# Fórmula de Mifflin – St Jeor 
+# Fórmula de Mifflin – St Jeor
 # -------------------------------
 def calcular_tmb(user: UserProfile):
     """Retorna Tasa Metabólica Basal (TMB) según Mifflin St-Jeor."""
@@ -107,11 +100,10 @@ def calcular_tdee(user: UserProfile):
     return round(tmb * factor_actividad(user))
 
 
-
 def ajustar_recomendaciones_por_enfermedad(user: UserProfile, rec: dict):
     if not user.diseases:
         return rec
-    
+
     rec_mod = rec.copy()
 
     for enfermedad in user.diseases:
@@ -119,11 +111,10 @@ def ajustar_recomendaciones_por_enfermedad(user: UserProfile, rec: dict):
 
         if enfermedad not in REGLAS_POR_ENFERMEDAD:
             continue
-        
+
         reglas = REGLAS_POR_ENFERMEDAD[enfermedad]
 
         for k, v in reglas.items():
-
             # Caso especial: déficit calórico para obesidad
             if k == "calorias_deficit" and "tdee" in rec:
                 rec_mod["calorias_max"] = int(rec["tdee"] * v)
@@ -133,6 +124,7 @@ def ajustar_recomendaciones_por_enfermedad(user: UserProfile, rec: dict):
             rec_mod[k] = v
 
     return rec_mod
+
 
 def generar_alertas_nutricionales(user: UserProfile, consumo: dict):
     rec_base = recomendaciones_estandar(user)
@@ -149,11 +141,11 @@ def generar_alertas_nutricionales(user: UserProfile, consumo: dict):
         alertas.append("Calorías por debajo de lo recomendado.")
     if consumo["calorias"] > rec["calorias_max"]:
         alertas.append("Ha excedido sus calorías recomendadas.")
-    
+
     # --- Carbohidratos ---
     if consumo["carbohidratos"] > rec["carbohidratos_max"]:
         alertas.append("Exceso de carbohidratos.")
-    
+
     # --- Azúcar ---
     if consumo["azucares"] > rec["azucares_max"]:
         alertas.append("Azúcares por encima del límite recomendado.")
@@ -161,7 +153,7 @@ def generar_alertas_nutricionales(user: UserProfile, consumo: dict):
     # --- Sal ---
     if consumo["sal"] > rec["sal_max"]:
         alertas.append("Ha superado la recomendación máxima de sal.")
-    
+
     if not alertas:
         alertas.append("Su ingesta diaria está dentro de rangos adecuados.")
 

@@ -10,7 +10,8 @@ class _FakeResponse:
 
 
 class _FakeLLM:
-    """LLM fake para simular ChatGoogleGenerativeAI en los tests.
+    """
+    LLM fake para simular ChatGoogleGenerativeAI en los tests.
 
     No hace llamadas externas; solo devuelve un contenido fijo en `invoke`.
     """
@@ -43,7 +44,8 @@ class _FakeLLM:
 
 @pytest.fixture(autouse=True)
 def patch_llm_and_clear_sessions(monkeypatch):
-    """Parchea dependencias externas de LangChain y limpia sesiones.
+    """
+    Parchea ChatGoogleGenerativeAI por un LLM falso y limpia sesiones.
 
     - Reemplaza ChatGoogleGenerativeAI por un LLM falso que no hace llamadas externas.
     - Reemplaza ConversationSummaryBufferMemory por una clase de memoria mínima que
@@ -51,19 +53,6 @@ def patch_llm_and_clear_sessions(monkeypatch):
       trabajo real, ya que las pruebas solo inspeccionan el prompt.
     - Limpia USER_SESSIONS entre pruebas para evitar fugas de estado.
     """
-
-    class _FakeMemory:  # pragma: no cover - implementación trivial
-        def __init__(self, *args, **kwargs) -> None:
-            self.kwargs = kwargs
-
-    class _FakeConversationChain:  # pragma: no cover - implementación trivial
-        def __init__(self, llm=None, memory=None, prompt=None, verbose: bool = False, *args, **kwargs) -> None:
-            # Solo necesitamos acceder a .prompt en los tests
-            self.llm = llm
-            self.memory = memory
-            self.prompt = prompt
-            self.verbose = verbose
-
     USER_SESSIONS.clear()
     monkeypatch.setattr(lc_mod, "ChatGoogleGenerativeAI", _FakeLLM)
     monkeypatch.setattr(lc_mod, "ConversationSummaryBufferMemory", _FakeMemory)
@@ -95,9 +84,9 @@ def test_get_user_chain_uses_profile_prompt_by_default():
 
     # Verificamos que el template base corresponde al de perfilamiento
     assert "TU OBJETIVO ACTUAL:" in template
-    assert "Realizar una \"entrevista casual\"" in template
-    # El nombre se pasa vía partial_variables de PromptTemplate
-    assert chain.prompt.partial_variables["full_name"] == "Juan Perez"
+    assert 'Realizar una "entrevista casual"' in template
+    # Y que ya se inyectó el nombre del usuario
+    assert "Juan Perez" in template
     # Aseguramos que NO está usando el prompt diario
     assert "Tu objetivo ahora NO es seguir investigando su personalidad" not in template
 
@@ -113,7 +102,11 @@ def test_get_user_chain_uses_daily_prompt_when_stage_daily():
         },
         personality_stage="daily",
         personality_profile={
-            "food_preferences": {"likes": ["frutas"], "dislikes": [], "emotional_eating_triggers": []},
+            "food_preferences": {
+                "likes": ["frutas"],
+                "dislikes": [],
+                "emotional_eating_triggers": [],
+            },
             "activity": {"level": "activo", "hobbies": ["correr"]},
             "content": {"platforms": ["YouTube"], "tone": "motivacional"},
             "mood_baseline": "motivado",
@@ -131,7 +124,6 @@ def test_get_user_chain_uses_daily_prompt_when_stage_daily():
 
 def test_summarize_personality_parses_valid_json():
     """summarize_personality debe devolver el dict parseado cuando el LLM responde JSON válido."""
-
     history = "Usuario: Me siento un poco estresado pero estoy intentando comer mejor."
     profile = {
         "full_name": "Carlos",
@@ -167,7 +159,6 @@ class _FakeLLMInvalid:
 
 def test_summarize_personality_invalid_json_returns_fallback(monkeypatch):
     """Si el LLM devuelve JSON inválido, summarize_personality debe usar el fallback seguro."""
-
     # Parcheamos temporalmente el LLM por uno que responde basura
     monkeypatch.setattr(lc_mod, "ChatGoogleGenerativeAI", _FakeLLMInvalid)
 
@@ -178,7 +169,12 @@ def test_summarize_personality_invalid_json_returns_fallback(monkeypatch):
 
     # Debe seguir devolviendo un dict con todas las claves esperadas
     assert isinstance(result, dict)
-    assert set(result.keys()) == {"food_preferences", "activity", "content", "mood_baseline"}
+    assert set(result.keys()) == {
+        "food_preferences",
+        "activity",
+        "content",
+        "mood_baseline",
+    }
 
     assert result["food_preferences"]["likes"] == []
     assert result["activity"]["level"] == "desconocido"

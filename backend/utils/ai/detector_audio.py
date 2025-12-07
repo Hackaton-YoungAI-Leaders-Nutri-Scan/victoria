@@ -1,16 +1,17 @@
-import os
 import base64
+import os
+
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
+
 
 def transcribir_audio(audio_bytes, mime_type="audio/ogg"):
     """
     Transcribe audio usando Google Speech-to-Text v1p1beta1.
     Devuelve SOLO el texto transcrito.
     """
-
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
     if not GOOGLE_API_KEY:
         return "ERROR: Falta GOOGLE_API_KEY en variables de entorno"
@@ -18,18 +19,18 @@ def transcribir_audio(audio_bytes, mime_type="audio/ogg"):
     # Se convierte el audio en base64
     audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
 
-    url = f"https://speech.googleapis.com/v1p1beta1/speech:recognize?key={GOOGLE_API_KEY}"
+    url = (
+        f"https://speech.googleapis.com/v1p1beta1/speech:recognize?key={GOOGLE_API_KEY}"
+    )
 
     body = {
-        "audio": {
-            "content": audio_b64
-        },
+        "audio": {"content": audio_b64},
         "config": {
             "enableAutomaticPunctuation": True,
-            "encoding": "OGG_OPUS",   # WhatsApp envía audio .ogg opus
+            "encoding": "OGG_OPUS",  # WhatsApp envía audio .ogg opus
             "languageCode": "es-ES",
-            "model": "default"
-        }
+            "model": "default",
+        },
     }
 
     response = requests.post(url, json=body)

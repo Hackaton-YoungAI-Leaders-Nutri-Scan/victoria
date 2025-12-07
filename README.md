@@ -2,6 +2,8 @@
 
 # VictorIA - Digital Care
 
+[![CI - Backend tests](https://github.com/Hackaton-YoungAI-Leaders-Nutri-Scan/victoria/actions/workflows/ci.yml/badge.svg)](https://github.com/Hackaton-YoungAI-Leaders-Nutri-Scan/victoria/actions/workflows/ci.yml)
+
 Asistente de nutrición y bienestar que acompaña al usuario mediante WhatsApp y una app móvil.
 
 - **Frontend:** React Native (Expo, TypeScript)
