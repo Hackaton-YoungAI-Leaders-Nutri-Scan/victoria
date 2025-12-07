@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, TextInput, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Search, MoreVertical, User, Bell, Shield, HelpCircle, LogOut, Plus, ChevronRight } from 'lucide-react-native';
 import { BottomNav } from '../components/BottomNav';
+import { getUserData } from 'src/utils/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const patients = [
   {
@@ -11,26 +13,46 @@ const patients = [
     status: 'Activo - Último reporte: Hoy 9:30 AM',
     statusColor: '#22c55e',
     img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCvHKG3KaIHKlRNPMQ1uoMOx-quke9OCcZn4kK5MSDRqHB-QW8po_9QAuovxd7auQPJZ5Q8VyWcF6flZEh0N9cL1zf7N4z3fwfBjpJtu0f2vl6uONfSxZ0pjAo58q89SqbMG1NrfX4NHN8Q4BaHHO3mCgdKQ6mEIyG2j8QIL6MYri3ioYWWo0gSRUYZjL5sQc4SZroT9ETTRxLDfAoj0uQfUWfqlB_I5jp1J9hehGBk053ovuerW0BHLSzG7D-wsPRIcKeZamD1FJU'
-  },
-  {
-    id: 2,
-    name: 'Carlos Gomez',
-    status: 'Pausado - Monitoreo en pausa',
-    statusColor: '#f97316',
-    img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCr-JIxVjucTbMqMIxRV_R_cfTRSDSSIMuAS0TQwJSVznZZci_f4vu0t66bzSpL7B7OB1KARIu_mD94LNI5Ulu53WWxvSdfcE5s-2ZRSfrNbeg7KT5xUwckHbQtHSw5ShGEPtGDhnmmc4VduJ6mFi2xeXP1jjxGM6l3jf-yeVZSZiiEBwEEjhOtTtHz47cKrNn3hoa2ryjZgtUd5rmROZEBCFYXNhJCRHmO1HhfYHaWj_2Y7YgdcVhczwUsh0TCAPauuLuIg1nDRxY'
-  },
-  {
-    id: 3,
-    name: 'Maria Fernandez',
-    status: 'Alerta - Glucosa alta: 180 mg/dL',
-    statusColor: '#ef4444',
-    textStatusColor: '#ef4444',
-    img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBZgHQDC5gNFQG2hXmnVYHEhVCScw0ANQDfme0pXZ2mrInqxVWOMXNYjtpJc-DFsSvC8H7lo83Ror0Cii8AucGIg1jS1xNBAO5__KodiyTa7T2O3a9niFSYF5hO-0ypSnuZh62-EOLWyB3Fw9Vq908uKWkZ0bEYdNGtetAfTN1woCBQI_ykrNFFqq-N3g992WwHsYMIM6I3SWWsgYMFb2l2Vu2cVvYRFvcLfHyfeo0rOxr8IKQVJhu8cT0iz55XKS1hBvXyv2XcL6E'
   }
 ];
 
 export const PatientList: React.FC = () => {
   const navigation = useNavigation<any>();
+
+  const [userData, setUserData] = useState<{client_id: string, profile_id: string, full_name: string | null, profile_photo_url: string | null} | null>(null);
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      const data = await getUserData();
+      if (data) {
+        setUserData(data);
+        // Now you can use data.client_id and data.profile_id
+        console.log('User data:', data);
+      } else {
+        // Handle case when no user data is found
+        console.log('No user data found');
+      }
+    };
+
+    loadUserData();
+  }, []);
+
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+
+useEffect(() => {
+  const loadProfileImage = async () => {
+    try {
+      const imageUri = await AsyncStorage.getItem('profile_photo_url');
+      if (imageUri) {
+        setProfileImage(imageUri);
+      }
+    } catch (error) {
+      console.error('Error loading profile image:', error);
+    }
+  };
+
+  loadProfileImage();
+}, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -40,23 +62,16 @@ export const PatientList: React.FC = () => {
         <Text style={styles.headerTitle}>Pacientes</Text>
         <View style={styles.headerAction}>
             <View style={styles.avatarPlaceholder}>
-                <User color="#475569" size={24} />
+                {profileImage ? (
+                  <Image source={{ uri: profileImage }} style={styles.avatar} />
+                ) : (
+                  <User color="#475569" size={24} />
+                )}
             </View>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Search */}
-        <View style={styles.searchContainer}>
-            <View style={styles.searchIcon}>
-                <Search color="#64748b" size={20} />
-            </View>
-            <TextInput 
-                placeholder="Buscar paciente"
-                placeholderTextColor="#64748b"
-                style={styles.searchInput}
-            />
-        </View>
 
         {/* List */}
         <View style={styles.list}>
@@ -66,14 +81,14 @@ export const PatientList: React.FC = () => {
                     onPress={() => navigation.navigate('Dashboard')} 
                     style={styles.card}
                 >
-                    <Image source={{ uri: patient.img }} style={styles.avatar} />
+                    <Image source={{ uri: userData?.profile_photo_url }} style={styles.avatar} />
                     <View style={styles.cardContent}>
-                        <Text style={styles.cardTitle} numberOfLines={1}>{patient.name}</Text>
+                        <Text style={styles.cardTitle} numberOfLines={1}>{userData?.full_name || 'Unknown'}</Text>
                         <View style={styles.statusRow}>
                             <View style={[styles.statusDot, { backgroundColor: patient.statusColor }]} />
                             <Text style={[
                                 styles.statusText, 
-                                { color: patient.textStatusColor || '#64748b' }
+                                { color: patient.statusColor || '#64748b' }
                             ]} numberOfLines={1}>
                                 {patient.status}
                             </Text>
@@ -94,10 +109,11 @@ export const PatientList: React.FC = () => {
                 { Icon: Bell, label: 'Notificaciones' },
                 { Icon: Shield, label: 'Privacidad y Seguridad' },
                 { Icon: HelpCircle, label: 'Ayuda y Soporte' },
-                { Icon: LogOut, label: 'Cerrar Sesión', color: '#ef4444' }
+                { Icon: LogOut, label: 'Cerrar Sesión', color: '#ef4444', onPress: () => navigation.navigate('Welcome') }
             ].map((item, i) => (
                 <TouchableOpacity 
                     key={i} 
+                    onPress={item.onPress}
                     style={[
                         styles.settingItem,
                         i !== 4 ? styles.settingItemBorder : null
@@ -127,6 +143,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f6f7f8',
+    paddingTop: 24,
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',

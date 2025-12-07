@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Modal, Alert, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, Camera, User, Cake, Smartphone } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ChevronLeft, Camera, User, Cake, Smartphone, Droplet, Ruler, Weight } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { BACKEND_BASE_URL } from 'src/config/api';
 
 const DISEASE_OPTIONS = [
   'Hipertensión',
@@ -117,7 +119,9 @@ export const PersonalData: React.FC = () => {
     });
 
     if (!result.canceled) {
-      setProfilePhoto(result.assets[0].uri);
+      const imageUri = result.assets[0].uri;
+      await AsyncStorage.setItem('profile_photo_url', imageUri);
+      setProfilePhoto(imageUri);
     }
   };
 
@@ -135,7 +139,9 @@ export const PersonalData: React.FC = () => {
     });
 
     if (!result.canceled) {
-      setProfilePhoto(result.assets[0].uri);
+      const imageUri = result.assets[0].uri;
+      await AsyncStorage.setItem('profile_photo_url', imageUri);
+      setProfilePhoto(imageUri);
     }
   };
 
@@ -153,6 +159,7 @@ export const PersonalData: React.FC = () => {
 
     // Función de registro que usará fetch
   const registerUser = async () => {
+    await AsyncStorage.setItem('full_name', fullName);
     const payload = {
       "external_id": "google-sub-123",
       "provider": "google",
@@ -178,29 +185,48 @@ export const PersonalData: React.FC = () => {
         return;
       }
 
-      const response = await fetch("/api/client/register", {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/client/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload), // ← aquí va el objeto que tú reemplazarás más adelante
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
+        console.error("Error en fetch:", errors);
         Alert.alert("Error", "Hubo un problema al registrar el usuario.");
         return;
       }
 
       const data = await response.json();
-      console.log("Respuesta del backend:", data);
 
+      const { client_id, profile_id } = data;
+
+      try {
+        await AsyncStorage.setItem('client_id', client_id.toString());
+        await AsyncStorage.setItem('profile_id', profile_id.toString());
+        const savedClientId = await AsyncStorage.getItem('client_id');
+        const savedProfileId = await AsyncStorage.getItem('profile_id');
+        const savedFullName = await AsyncStorage.getItem('full_name');
+        const savedProfilePhotoUrl = await AsyncStorage.getItem('profile_photo_url');
+        if (savedClientId && savedProfileId && savedFullName && savedProfilePhotoUrl) {
+          console.log('User data saved successfully');
+        }
+      } catch (error) {
+        console.error('Error retrieving data:', error);
+      }
+
+      // Navigate to success screen
+      navigation.navigate("ConnectionSuccess", { client_id, profile_id });
 
       // Aquí conectas tu fetch o navegación
-      navigation.navigate("ConnectionSuccess");
+      navigation.navigate("ConnectionSuccess", { client_id, profile_id });
 
     } catch (error) {
       console.error("Error en fetch:", error);
       Alert.alert("Error", "No se pudo conectar con el servidor.");
+      navigation.navigate("ConnectionSuccess");
     }
   };
 
@@ -323,7 +349,11 @@ export const PersonalData: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>RH</Text>
-              <TextInput
+              <View style={styles.inputContainer}>
+                <View style={styles.inputIcon}>
+                  <Droplet color="#9ca3af" size={20} />
+                </View>
+                <TextInput
                 placeholder="Ej: O+"
                 placeholderTextColor="#9ca3af"
                 style={styles.input}
@@ -332,7 +362,7 @@ export const PersonalData: React.FC = () => {
                 onChangeText={setRh}
               />
               {errors.rh && <Text style={styles.errorText}>{errors.rh}</Text>}
-
+              </View>
             </View>
 
             
@@ -340,6 +370,9 @@ export const PersonalData: React.FC = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Estatura (cm)</Text>
               <View style={styles.inputContainer}>
+                <View style={styles.inputIcon}>
+                  <Ruler color="#9ca3af" size={20} />
+                </View>
                 <TextInput
                   keyboardType="numeric"
                   placeholder="Introduce tu estatura en centímetros"
@@ -355,6 +388,9 @@ export const PersonalData: React.FC = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Peso (kg)</Text>
               <View style={styles.inputContainer}>
+                <View style={styles.inputIcon}>
+                  <Weight color="#9ca3af" size={20} />
+                </View>
                 <TextInput
                   keyboardType="numeric"
                   placeholder="Introduce tu peso en kilogramos"
@@ -511,6 +547,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f6f7f8',
     paddingTop: 20,
+    paddingBottom: 20,
   },
   keyboardAvoid: {
     flex: 1,

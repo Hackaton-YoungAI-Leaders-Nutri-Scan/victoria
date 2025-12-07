@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet, SafeAreaView, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { 
@@ -8,9 +8,11 @@ import {
   Footprints, 
   Smile, 
   Activity,
-  Pill
+  Pill,
+  User,
 } from 'lucide-react-native';
 import { BottomNav } from '../components/BottomNav';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -62,22 +64,42 @@ export const Dashboard: React.FC = () => {
     { name: 'D', value: 7000 },
   ];
 
+  const fullName = AsyncStorage.getItem('full_name');
+  console.log(fullName);
+    const [profileImage, setProfileImage] = useState<string | null>(null);
+
+    useEffect(() => {
+      const loadProfileImage = async () => {
+        try {
+          const imageUri = await AsyncStorage.getItem('profile_photo_url');
+          if (imageUri) {
+            setProfileImage(imageUri);
+          }
+        } catch (error) {
+          console.error('Error loading profile image:', error);
+        }
+      };
+
+      loadProfileImage();
+    }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
             <View style={styles.profileContainer}>
-                <Image 
-                    source={{ uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuAv9PLR3_xgWvvLHy6thjn0D1u3jfJeb7PpZzJ_OFt7LXbuLyJX2hEBZh2LvSJT8guoipbNEF9qvu9Xl1WQ6JBT2RIKRGeP2PmBASYk3Ak55PltJGQ_g5bebs3i5zk26UwTK8HvJzhB0lkwoBd-G2V31h36iT85Furv41zWL5rZ8pk4jXQy5dplVF0q78xDgmLFZ4cLUTelO93oy1xvqBJWHHGP8tIKnAURBLFKWoJCie15niv4nZlwoFg0yvlMhXkPn6QpBqztruc" }}
-                    style={styles.profileImage}
-                />
+                {profileImage ? (
+                  <Image source={{ uri: profileImage }} style={styles.profileImage} />
+                ) : (
+                  <User color="#475569" size={24} />
+                )}
             </View>
             <TouchableOpacity style={styles.dropdownButton}>
                 <ChevronDown size={24} color="#111518" />
             </TouchableOpacity>
         </View>
-        <Text style={styles.userName}>María García</Text>
+        <Text style={styles.userName}>{fullName}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -101,25 +123,30 @@ export const Dashboard: React.FC = () => {
             </View>
         </View>
 
-        {/* Quick Stats Carousel */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.carousel} contentContainerStyle={styles.carouselContent}>
-            {[
-                { Icon: Droplet, label: 'Hidratación', val: '1.5L / 2L' },
-                { Icon: Utensils, label: 'Comidas', val: '2 / 3' },
-                { Icon: Footprints, label: 'Actividad', val: '3,450 pasos' },
-                { Icon: Smile, label: 'Ánimo', val: 'Bueno' },
-            ].map((stat, i) => (
-                <View key={i} style={styles.statCard}>
-                    <View style={styles.statIconBg}>
-                        <stat.Icon size={32} color="#1392ec" />
-                    </View>
-                    <View>
-                        <Text style={styles.statLabel}>{stat.label}</Text>
-                        <Text style={styles.statValue}>{stat.val}</Text>
-                    </View>
-                </View>
-            ))}
-        </ScrollView>
+       {/* Carrusel Corregido */}
+       <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.carousel}
+        contentContainerStyle={styles.carouselContent} // Usamos el estilo correcto
+      >
+        {[
+          { Icon: Droplet, label: 'Hidratación', val: '1.5L / 2L' },
+          { Icon: Utensils, label: 'Comidas', val: '2 / 3' },
+          { Icon: Footprints, label: 'Actividad', val: '3,450 pasos' },
+          { Icon: Smile, label: 'Ánimo', val: 'Bueno' },
+        ].map((stat, i) => (
+          <View key={i} style={styles.statCard}>
+            <View style={styles.statIconBg}>
+              <stat.Icon size={32} color="#1392ec" />
+            </View>
+            <View>
+              <Text style={styles.statLabel}>{stat.label}</Text>
+              <Text style={styles.statValue}>{stat.val}</Text>
+            </View>
+          </View>
+        ))}
+      </ScrollView>
 
         {/* Recent Activity */}
         <View style={styles.section}>
@@ -200,6 +227,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f6f7f8',
+    paddingTop: 20,
+    paddingBottom: 20,
   },
   header: {
     padding: 16,
@@ -278,17 +307,22 @@ const styles = StyleSheet.create({
   },
   carousel: {
     paddingLeft: 16,
-    paddingBottom: 16,
+    // Asegura que el ScrollView tenga suficiente espacio para ser visible
+    minHeight: 180, 
   },
   carouselContent: {
+    // Necesario para que el último elemento tenga el mismo padding que el primero
     paddingRight: 16,
-    gap: 12,
   },
   statCard: {
-    minWidth: 140,
+    // Solución clave: Evita que la tarjeta se expanda para ocupar todo el ancho del ScrollView
+    width: 160,
+    flexGrow: 0, 
     backgroundColor: 'white',
+    marginBottom: 16,
     padding: 12,
     borderRadius: 12,
+    marginRight: 12,
     gap: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
