@@ -44,7 +44,8 @@ class _FakeLLM:
 
 @pytest.fixture(autouse=True)
 def patch_llm_and_clear_sessions(monkeypatch):
-    """Parchea dependencias externas de LangChain y limpia sesiones.
+    """
+    Parchea dependencias externas de LangChain y limpia sesiones.
 
     - Reemplaza ChatGoogleGenerativeAI por un LLM falso que no hace llamadas externas.
     - Reemplaza ConversationSummaryBufferMemory por una clase de memoria mínima que
