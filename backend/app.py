@@ -3,6 +3,7 @@ from flask_cors import CORS
 from PIL import Image
 import io
 import json
+<<<<<<< HEAD
 import os
 import requests
 import logging
@@ -10,79 +11,21 @@ from datetime import datetime
 from sqlalchemy import create_engine, Integer, String, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session, Mapped, mapped_column
 from google.cloud import storage
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.prompts import PromptTemplate
-from langchain.memory import ConversationSummaryBufferMemory
-from langchain.chains import ConversationChain
-from dotenv import load_dotenv
-
 from detector_image import detectar_auto
-
-load_dotenv()
+from detector_audio import transcribir_audio
 
 logging.basicConfig(level=logging.INFO)
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://appuser:secret@db:5432/food_db")
 
 engine = create_engine(DATABASE_URL, echo=False, future=True)
 SessionLocal = scoped_session(sessionmaker(bind=engine, autoflush=False, autocommit=False))
 Base = declarative_base()
+=======
+>>>>>>> cb2acacfb02c55543339630d776050eeec2f57bf
 
 app = Flask(__name__)
 CORS(app)  # CORS básico para permitir peticiones desde el frontend (por defecto permite todos los orígenes)
-
-USER_SESSIONS = {}
-
-## LANGCHAIN CONFIG
-prompt_template = PromptTemplate(
-    input_variables=["input", "history"],
-    template="""
-Eres Nutri-Scan, un asistente experto en nutrición clínica y educación alimentaria.
-Tu tarea es responder mensajes de WhatsApp de forma:
-
-- Breve
-- Clara
-- Amigable
-- Basada en evidencia
-- Sin usar jerga médica innecesaria
-- Sin dar diagnósticos médicos
-
-Historial resumido de la conversación:
-{history}
-
-Mensaje del usuario:
-"{input}"
-"""
-)
-## LANGCHAIN
-
-
-def get_user_chain(user_id: str) -> ConversationChain:
-    """
-    Devuelve la cadena (LLM + memoria) asociada a un usuario.
-    Si no existe, la crea.
-    """
-    if user_id not in USER_SESSIONS:
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
-            temperature=0.7
-        )
-
-        memory = ConversationSummaryBufferMemory(
-            llm=llm,
-            max_token_limit=600,
-            return_messages=True
-        )
-
-        chain = ConversationChain(
-            llm=llm,
-            memory=memory,
-            verbose=False
-        )
-
-        USER_SESSIONS[user_id] = chain
-
-    return USER_SESSIONS.get(user_id)
 
 
 def simulate_model_from_filename(filename: str):
@@ -107,6 +50,7 @@ def simulate_model_from_filename(filename: str):
     return filename.rsplit(".", 1)[0].capitalize(), "AMARILLO"
 
 
+<<<<<<< HEAD
 class FoodEntry(Base):
     __tablename__ = "food_entries"
 
@@ -139,12 +83,17 @@ class WhatsAppMessage(Base):
         }
 
 
-def build_whatsapp_reply(user_message: str, phone: str) -> str:
-    """Genera la respuesta nutricional para WhatsApp usando PromptTemplate."""
-    chain = get_user_chain(phone)
-    response = chain.predict(input=user_message)
+def build_whatsapp_reply(user_message: str) -> str:
+    """Genera el texto de respuesta para un mensaje de WhatsApp.
 
-    return response.strip()
+    De momento es una respuesta fija, pero aquí podrías conectar tu lógica
+    de Nutri-Scan (modelo, reglas, etc.).
+    """
+
+    return (
+        "Gracias por tu mensaje. Aún no estoy conectado al modelo nutricional, "
+        "pero puedo recibir tu texto y procesarlo más adelante."
+    )
 
 
 def send_whatsapp_message(phone: str, text: str) -> dict:
@@ -239,6 +188,7 @@ def upload_image_to_gcp(image_bytes: bytes, filename: str) -> str | None:
         logging.exception("[GCP STORAGE] Error subiendo imagen a bucket %s: %s", bucket_name, e)
         return None
 
+
 @app.route("/api/whatsapp/webhook", methods=["GET", "POST"])
 def whatsapp_webhook():
     """Endpoint básico para recibir eventos/mensajes de WhatsApp.
@@ -285,7 +235,6 @@ def whatsapp_webhook():
             msg = messages[0]
             phone = msg.get("from")
             msg_type = msg.get("type")
-
             if msg_type == "text":
                 text_obj = msg.get("text") or {}
                 user_message = text_obj.get("body")
@@ -305,12 +254,13 @@ def whatsapp_webhook():
                         fname = f"whatsapp/{phone}_{ts}_{media_id}.jpg"
                         media_url = upload_image_to_gcp(img_bytes, fname)
 
+                        # 1. Ejecutar modelo Gemini para detectar alimentos
                         result_json = detectar_auto(img_bytes)
-
+                        # 2. Si hubo error en el modelo
                         if '"error"' in result_json:
-                            reply_text = "Ocurrió un error analizando la imagen, intenta nuevamente."
+                            reply_text = "⚠️ Ocurrió un error analizando la imagen, intenta nuevamente."
                         else:
-                            reply_text = result_json
+                            reply_text = result_json  # JSON crudo devuelto por Gemini
 
             elif msg_type == "audio":
                 audio_obj = msg.get("audio") or {}
@@ -327,15 +277,30 @@ def whatsapp_webhook():
                         fname = f"whatsapp/{phone}_{ts}_{media_id}.ogg"
                         media_url = upload_image_to_gcp(audio_bytes, fname)
 
+
+                        transcripcion = transcribir_audio(audio_bytes)
+
+
+                        user_message = transcripcion if transcripcion else "No se pudo transcribir el audio."
+
+
+                        
+
+
+
+
     except Exception:
         # Si algo falla en el parseo, se mantiene user_message = None
         logging.exception("[WHATSAPP WEBHOOK] Error extrayendo mensaje/phone del payload")
 
+    user_message = reply_text if 'reply_text' in locals() else user_message
+
     if user_message:
         logging.info("[WHATSAPP WEBHOOK] Mensaje de usuario detectado. from=%s body=%s", phone, user_message)
-        reply_text = build_whatsapp_reply(user_message, phone)
+        reply_text = build_whatsapp_reply(user_message)
         db = SessionLocal()
 
+        # Guardar mensaje entrante (incluyendo media_url si existe)
         if phone:
             incoming = WhatsAppMessage(
                 phone=phone,
@@ -428,6 +393,8 @@ def whatsapp_message():
     return jsonify(response), 200
 
 
+=======
+>>>>>>> cb2acacfb02c55543339630d776050eeec2f57bf
 @app.route("/api/recommendation", methods=["POST"])
 def recommendation():
     # Validar presencia de archivo
@@ -512,6 +479,7 @@ def recommendation():
 
     return jsonify(response), 200
 
+<<<<<<< HEAD
 def init_db():
     Base.metadata.create_all(bind=engine)
 
@@ -562,6 +530,8 @@ def get_whatsapp_messages(phone: str):
     finally:
         db.close()
 
+=======
+>>>>>>> cb2acacfb02c55543339630d776050eeec2f57bf
 
 if __name__ == "__main__":
     # Cambia host y puerto si lo necesitas (por ejemplo, host="0.0.0.0")
