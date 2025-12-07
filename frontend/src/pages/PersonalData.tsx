@@ -101,16 +101,6 @@ export const PersonalData: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = () => {
-    if (!validateForm()) {
-      Alert.alert("Formulario incompleto", "Por favor revisa los errores.");
-      return;
-    }
-
-    // Aquí conectas tu fetch o navegación
-    navigation.navigate("ConnectionSuccess");
-  };
-
   const pickImageFromGallery = async () => {
     // Solicitar permisos
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -161,6 +151,59 @@ export const PersonalData: React.FC = () => {
     );
   };
 
+    // Función de registro que usará fetch
+  const registerUser = async () => {
+    const payload = {
+      "external_id": "google-sub-123",
+      "provider": "google",
+      "profile": {
+        "profile_photo_url": profilePhoto,
+        "full_name": fullName,
+        "age": age,
+        "gender": gender,
+        "whatsapp_number": phone,
+        "rh": rh,
+        "height_cm": height,
+        "weight_kg": weight,
+        "diseases": selectedDiseases,
+        "allergies": selectedAllergies,
+        "accepted_terms": true
+      }
+
+    };
+
+    try {
+      if (!validateForm()) {
+        Alert.alert("Formulario incompleto", "Por favor revisa los errores.");
+        return;
+      }
+
+      const response = await fetch("/api/client/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload), // ← aquí va el objeto que tú reemplazarás más adelante
+      });
+
+      if (!response.ok) {
+        Alert.alert("Error", "Hubo un problema al registrar el usuario.");
+        return;
+      }
+
+      const data = await response.json();
+      console.log("Respuesta del backend:", data);
+
+
+      // Aquí conectas tu fetch o navegación
+      navigation.navigate("ConnectionSuccess");
+
+    } catch (error) {
+      console.error("Error en fetch:", error);
+      Alert.alert("Error", "No se pudo conectar con el servidor.");
+    }
+  };
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -175,14 +218,6 @@ export const PersonalData: React.FC = () => {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Datos Personales</Text>
           <View style={{ width: 40 }} />
-        </View>
-
-        {/* Progress */}
-        <View style={styles.progressContainer}>
-          <Text style={styles.progressText}>Paso 1 de 4</Text>
-          <View style={styles.progressBarBg}>
-            <View style={styles.progressBarFill} />
-          </View>
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -429,7 +464,7 @@ export const PersonalData: React.FC = () => {
         {/* Bottom Button */}
         <View style={styles.footer}>
           <TouchableOpacity 
-            onPress={handleNext}
+            onPress={registerUser}
             style={styles.nextButton}
           >
             <Text style={styles.nextButtonText}>Siguiente</Text>
