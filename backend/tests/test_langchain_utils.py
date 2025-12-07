@@ -47,11 +47,16 @@ def patch_llm_and_clear_sessions(monkeypatch):
     """
     Parchea ChatGoogleGenerativeAI por un LLM falso y limpia sesiones.
 
-    Evita llamadas reales a Gemini y asegura que USER_SESSIONS no comparta
-    estado entre pruebas.
+    - Reemplaza ChatGoogleGenerativeAI por un LLM falso que no hace llamadas externas.
+    - Reemplaza ConversationSummaryBufferMemory por una clase de memoria mínima que
+      acepta cualquier LLM (evitando validaciones de tipo de Pydantic) y no realiza
+      trabajo real, ya que las pruebas solo inspeccionan el prompt.
+    - Limpia USER_SESSIONS entre pruebas para evitar fugas de estado.
     """
     USER_SESSIONS.clear()
     monkeypatch.setattr(lc_mod, "ChatGoogleGenerativeAI", _FakeLLM)
+    monkeypatch.setattr(lc_mod, "ConversationSummaryBufferMemory", _FakeMemory)
+    monkeypatch.setattr(lc_mod, "ConversationChain", _FakeConversationChain)
     yield
     USER_SESSIONS.clear()
 
@@ -113,8 +118,8 @@ def test_get_user_chain_uses_daily_prompt_when_stage_daily():
     # Verificamos que el template base corresponde al de seguimiento diario
     assert "Tu objetivo ahora NO es seguir investigando su personalidad" in template
     assert "RESUMEN DE PERSONALIDAD Y HÁBITOS" in template
-    # Y que el nombre se haya inyectado
-    assert "Ana" in template
+    # El nombre se pasa vía partial_variables de PromptTemplate
+    assert chain.prompt.partial_variables["full_name"] == "Ana"
 
 
 def test_summarize_personality_parses_valid_json():
