@@ -2,7 +2,7 @@
 
 # VictorIA - Digital Care
 
-Asistente de nutrición y bienestar que acompaña al usuario por WhatsApp y permite monitorizar mediante la app móvil a nuestros adultos mayores.
+Asistente de nutrición y bienestar que acompaña al usuario mediante WhatsApp y una app móvil.
 
 - **Frontend:** React Native (Expo, TypeScript)
 - **Backend:** Python + Flask + SQLAlchemy + PostgreSQL
