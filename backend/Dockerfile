@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar requirements primero para aprovechar cache de Docker
-COPY requirements.txt /app/requirements.txt
+COPY requirementsDocker.txt /app/requirements.txt
 
 # Instalar dependencias de Python
 RUN pip install --no-cache-dir -r requirements.txt
