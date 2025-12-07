@@ -1,5 +1,6 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.prompts import PromptTemplate
+#from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 from langchain.memory import ConversationSummaryBufferMemory
 from langchain.chains import ConversationChain
 
