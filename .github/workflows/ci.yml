@@ -2,7 +2,7 @@ name: CI - Backend tests
 
 on:
   push:
-    branches: [ main, master, johnmolano ]
+    branches: [ main, master, johnmolano, otra ]
   pull_request:
     branches: [ main ]
 
