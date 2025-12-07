@@ -1,21 +1,50 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Mail, Lock, Flower } from 'lucide-react-native';
 
 export const Welcome: React.FC = () => {
   const navigation = useNavigation<any>();
 
+  // Función de registro que usará fetch
+  // const registerUser = async () => {
+  //   const payload = {
+  //     id: 1,
+  //   };
+
+  //   try {
+  //     const response = await fetch("<TU_ENDPOINT>", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify(payload), // ← aquí va el objeto que tú reemplazarás más adelante
+  //     });
+
+  //     if (!response.ok) {
+  //       Alert.alert("Error", "Hubo un problema al registrar el usuario.");
+  //       return;
+  //     }
+
+  //     const data = await response.json();
+  //     console.log("Respuesta del backend:", data);
+
+  //     navigation.navigate("PersonalData");
+
+  //   } catch (error) {
+  //     console.error("Error en fetch:", error);
+  //     Alert.alert("Error", "No se pudo conectar con el servidor.");
+  //   }
+  // };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          {/* Logo */}
           <View style={styles.logoContainer}>
             <Flower color="#1392ec" size={40} />
           </View>
 
-          {/* Hero Image */}
           <View style={styles.heroContainer}>
             <Image 
               source={{ uri: "https://lh3.googleusercontent.com/aida-public/AB6AXuArcg5_cUBPw6Rvwz9WQwl_PhgbNGTbUsn8OXud5dJSqfNN9dezA2GmErm6SkLiHxyd9ZeAA-mV9auVzXkjqQyuChBTl0BDR2UQhGTLdk7_-iLY0xCx7eBQ5EQd2J3dsRjFztGRerMC1BumygNdVK0sfQh_Z-BcQeH8J4G5AsKd5pOMVMBhztQ6TNepHo3hACOOLBj8874X1Dou9oeeGNjjNs44RL7zoAncVhacM30o-FVG6O6VAh3Ee2V2QER-dRc-XOjYjZ-8RCk" }}
@@ -24,36 +53,27 @@ export const Welcome: React.FC = () => {
             />
           </View>
 
-          <Text style={styles.title}>
-            Cuidar es más fácil juntos
-          </Text>
-          <Text style={styles.subtitle}>
-            Tu asistente para la tranquilidad y el bienestar
-          </Text>
+          <Text style={styles.title}>Cuidar es más fácil juntos</Text>
+          <Text style={styles.subtitle}>Tu asistente para la tranquilidad y el bienestar</Text>
         </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity 
-            onPress={() => navigation.navigate('PersonalData')} 
-            style={[styles.button, styles.appleButton]}
-          >
-            <Text style={styles.appleIcon}></Text>
-            <Text style={styles.appleButtonText}>Continuar con Apple</Text>
-          </TouchableOpacity>
 
+          {/* Continuar con Google */}
           <TouchableOpacity 
-            onPress={() => navigation.navigate('PersonalData')} 
+            // onPress={registerUser}
             style={[styles.button, styles.googleButton]}
           >
             <View style={styles.googleIconContainer}>
-             {/* Using a simple Text placeholder for Google G or external SVG due to complexity of raw SVG in RN Text */}
-             <Text style={styles.googleIconText}>G</Text>
+              <Text style={styles.googleIconText}>G</Text>
             </View>
             <Text style={styles.googleButtonText}>Continuar con Google</Text>
           </TouchableOpacity>
 
+          {/* Continuar con Email */}
           <TouchableOpacity 
-            onPress={() => navigation.navigate('PersonalData')} 
+            // onPress={registerUser}
+            onPress={() => navigation.navigate('PersonalData')}
             style={[styles.button, styles.emailButton]}
           >
             <Mail size={20} color="#1392ec" />
@@ -72,6 +92,7 @@ export const Welcome: React.FC = () => {
             <Text style={styles.linkText}>Política de Privacidad</Text>.
           </Text>
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -81,6 +102,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f6f7f8',
+    paddingTop: 20,
   },
   scrollContent: {
     flexGrow: 1,
@@ -127,7 +149,7 @@ const styles = StyleSheet.create({
     color: '#4b5563',
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 0,
     maxWidth: 280,
   },
   actions: {

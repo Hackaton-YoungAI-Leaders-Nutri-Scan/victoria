@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Modal, Alert, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, Camera, User, Cake, Smartphone } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 
 const DISEASE_OPTIONS = [
   'Hipertensión',
@@ -34,12 +35,175 @@ const ALLERGY_OPTIONS = [
 ];
 
 export const PersonalData: React.FC = () => {
+
+  const [fullName, setFullName] = useState("");
+  const [age, setAge] = useState("");
+  const [phone, setPhone] = useState("");
+  const [rh, setRh] = useState("");
+  const [height, setHeight] = useState("");
+  const [weight, setWeight] = useState("");
   const navigation = useNavigation<any>();
-  const [gender, setGender] = useState('Masculino');
+  const [gender, setGender] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [selectedDiseases, setSelectedDiseases] = useState<string[]>([]);
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [isTermsModalVisible, setIsTermsModalVisible] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+
+  // ERRORS
+  const [errors, setErrors] = useState<any>({});
+
+  // VALIDATION FUNCTION
+  const validateForm = () => {
+    let newErrors: any = {};
+
+    // Nombre
+    if (!fullName.trim()) newErrors.fullName = "El nombre es obligatorio.";
+    else if (fullName.trim().length < 3) newErrors.fullName = "Debe tener al menos 3 caracteres.";
+    else if (/\d/.test(fullName)) newErrors.fullName = "No puede contener números.";
+
+    // Edad
+    const ageNum = Number(age);
+    if (!age) newErrors.age = "La edad es obligatoria.";
+    else if (isNaN(ageNum)) newErrors.age = "Debe ser numérico.";
+    else if (ageNum < 1 || ageNum > 120) newErrors.age = "Edad inválida.";
+
+    // Teléfono
+    const cleanedPhone = phone.replace(/\D/g, "");
+    if (!cleanedPhone) newErrors.phone = "El número es obligatorio.";
+    else if (cleanedPhone.length < 8) newErrors.phone = "Muy corto.";
+    else if (cleanedPhone.length > 15) newErrors.phone = "Muy largo.";
+
+    // RH
+    const validRH = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"];
+    if (!rh.trim()) newErrors.rh = "El RH es obligatorio.";
+    else if (!validRH.includes(rh.toUpperCase())) newErrors.rh = "Formato inválido. Ej: O+";
+
+    // Estatura
+    const heightNum = Number(height);
+    if (!height) newErrors.height = "La estatura es obligatoria.";
+    else if (isNaN(heightNum)) newErrors.height = "Debe ser numérico.";
+    else if (heightNum < 50 || heightNum > 250) newErrors.height = "Valores entre 50 y 250 cm.";
+
+    // Peso
+    const weightNum = Number(weight);
+    if (!weight) newErrors.weight = "El peso es obligatorio.";
+    else if (isNaN(weightNum)) newErrors.weight = "Debe ser numérico.";
+    else if (weightNum < 20 || weightNum > 350) newErrors.weight = "Valores entre 20 y 350 kg.";
+
+    // Sexo
+    if (!gender) newErrors.gender = "El sexo es obligatorio.";
+
+    // Términos
+    if (!termsAccepted) newErrors.terms = "Debes aceptar los términos.";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const pickImageFromGallery = async () => {
+    // Solicitar permisos
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permissionResult.granted) {
+      Alert.alert("Permiso requerido", "Necesitas permitir acceso a la galería.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setProfilePhoto(result.assets[0].uri);
+    }
+  };
+
+  const takePhotoWithCamera = async () => {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permissionResult.granted) {
+      Alert.alert("Permiso requerido", "Necesitas permitir acceso a la cámara.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setProfilePhoto(result.assets[0].uri);
+    }
+  };
+
+  const handleSelectPhoto = () => {
+    Alert.alert(
+      "Seleccionar imagen",
+      "Elige una opción",
+      [
+        { text: "Galería", onPress: pickImageFromGallery },
+        { text: "Cámara", onPress: takePhotoWithCamera },
+        { text: "Cancelar", style: "cancel" }
+      ]
+    );
+  };
+
+    // Función de registro que usará fetch
+  const registerUser = async () => {
+    const payload = {
+      "external_id": "google-sub-123",
+      "provider": "google",
+      "profile": {
+        "profile_photo_url": profilePhoto,
+        "full_name": fullName,
+        "age": age,
+        "gender": gender,
+        "whatsapp_number": phone,
+        "rh": rh,
+        "height_cm": height,
+        "weight_kg": weight,
+        "diseases": selectedDiseases,
+        "allergies": selectedAllergies,
+        "accepted_terms": true
+      }
+
+    };
+
+    try {
+      if (!validateForm()) {
+        Alert.alert("Formulario incompleto", "Por favor revisa los errores.");
+        return;
+      }
+
+      const response = await fetch("/api/client/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload), // ← aquí va el objeto que tú reemplazarás más adelante
+      });
+
+      if (!response.ok) {
+        Alert.alert("Error", "Hubo un problema al registrar el usuario.");
+        return;
+      }
+
+      const data = await response.json();
+      console.log("Respuesta del backend:", data);
+
+
+      // Aquí conectas tu fetch o navegación
+      navigation.navigate("ConnectionSuccess");
+
+    } catch (error) {
+      console.error("Error en fetch:", error);
+      Alert.alert("Error", "No se pudo conectar con el servidor.");
+    }
+  };
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -56,19 +220,18 @@ export const PersonalData: React.FC = () => {
           <View style={{ width: 40 }} />
         </View>
 
-        {/* Progress */}
-        <View style={styles.progressContainer}>
-          <Text style={styles.progressText}>Paso 1 de 4</Text>
-          <View style={styles.progressBarBg}>
-            <View style={styles.progressBarFill} />
-          </View>
-        </View>
-
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Profile Photo */}
           <View style={styles.photoSection}>
-            <TouchableOpacity style={styles.photoPlaceholder}>
-              <Camera color="#9ca3af" size={32} />
+            <TouchableOpacity style={styles.photoPlaceholder} onPress={handleSelectPhoto}>
+              {profilePhoto ? (
+                <Image 
+                  source={{ uri: profilePhoto }} 
+                  style={styles.photoImage} 
+                />
+              ) : (
+                <Camera color="#9ca3af" size={32} />
+              )}
             </TouchableOpacity>
             <View style={styles.photoLabels}>
               <Text style={styles.photoTitle}>Añadir foto</Text>
@@ -88,7 +251,10 @@ export const PersonalData: React.FC = () => {
                   placeholder="Introduce el nombre completo"
                   placeholderTextColor="#9ca3af"
                   style={styles.input}
+                  value={fullName}
+                  onChangeText={setFullName}
                 />
+                {errors.fullName && <Text style={styles.errorText}>{errors.fullName}</Text>}
               </View>
             </View>
 
@@ -103,7 +269,10 @@ export const PersonalData: React.FC = () => {
                   placeholder="Introduce la edad"
                   placeholderTextColor="#9ca3af"
                   style={styles.input}
+                  value={age}
+                  onChangeText={setAge}
                 />
+                {errors.age && <Text style={styles.errorText}>{errors.age}</Text>}
               </View>
             </View>
 
@@ -128,6 +297,7 @@ export const PersonalData: React.FC = () => {
                   </TouchableOpacity>
                 ))}
               </View>
+              {errors.gender && <Text style={styles.errorText}>{errors.gender}</Text>}
             </View>
 
             <View style={styles.inputGroup}>
@@ -141,7 +311,10 @@ export const PersonalData: React.FC = () => {
                   placeholder="(+XX) XXX-XXX-XXXX"
                   placeholderTextColor="#9ca3af"
                   style={styles.input}
+                  value={phone}
+                  onChangeText={setPhone}
                 />
+                {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
               </View>
               <Text style={styles.helperText}>
                 Este es el número que usará Victoria para comunicarse.
@@ -150,15 +323,19 @@ export const PersonalData: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>RH</Text>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  placeholder="Ej: O+"
-                  placeholderTextColor="#9ca3af"
-                  style={styles.input}
-                  autoCapitalize="characters"
-                />
-              </View>
+              <TextInput
+                placeholder="Ej: O+"
+                placeholderTextColor="#9ca3af"
+                style={styles.input}
+                autoCapitalize="characters"
+                value={rh}
+                onChangeText={setRh}
+              />
+              {errors.rh && <Text style={styles.errorText}>{errors.rh}</Text>}
+
             </View>
+
+            
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Estatura (cm)</Text>
@@ -168,7 +345,10 @@ export const PersonalData: React.FC = () => {
                   placeholder="Introduce tu estatura en centímetros"
                   placeholderTextColor="#9ca3af"
                   style={styles.input}
+                  value={height}
+                  onChangeText={setHeight}
                 />
+                {errors.height && <Text style={styles.errorText}>{errors.height}</Text>}
               </View>
             </View>
 
@@ -180,7 +360,10 @@ export const PersonalData: React.FC = () => {
                   placeholder="Introduce tu peso en kilogramos"
                   placeholderTextColor="#9ca3af"
                   style={styles.input}
+                  value={weight}
+                  onChangeText={setWeight}
                 />
+                {errors.weight && <Text style={styles.errorText}>{errors.weight}</Text>}
               </View>
             </View>
 
@@ -281,7 +464,7 @@ export const PersonalData: React.FC = () => {
         {/* Bottom Button */}
         <View style={styles.footer}>
           <TouchableOpacity 
-            onPress={() => navigation.navigate('ConnectionSuccess')}
+            onPress={registerUser}
             style={styles.nextButton}
           >
             <Text style={styles.nextButtonText}>Siguiente</Text>
@@ -327,6 +510,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f6f7f8',
+    paddingTop: 20,
   },
   keyboardAvoid: {
     flex: 1,
@@ -389,6 +573,12 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 64,
   },
   photoLabels: {
     alignItems: 'center',
@@ -404,6 +594,11 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: 24,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginBottom: 8,
   },
   inputGroup: {
     gap: 8,
