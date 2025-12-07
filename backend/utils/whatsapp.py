@@ -2,17 +2,100 @@ import os
 import requests
 import logging
 
-from utils.langchain import get_user_chain
+from db.db import SessionLocal, UserProfile, WhatsAppMessage
+from utils.langchain import get_user_chain, summarize_personality
 
 logging.basicConfig(level=logging.INFO)
 
 
 def build_whatsapp_reply(user_message: str, phone: str) -> str:
-    """Genera la respuesta nutricional para WhatsApp usando PromptTemplate."""
-    chain = get_user_chain(phone)
-    response = chain.predict(input=user_message)
+    """Genera la respuesta nutricional para WhatsApp usando LangChain.
 
-    return response.strip()
+    Ahora intenta recuperar el perfil del usuario desde la BD (UserProfile)
+    usando el número de WhatsApp como clave, para personalizar el prompt
+    de Victoria (condiciones, alergias, etc.).
+    """
+
+    user_profile_dict = None
+
+    personality_stage = "profiling"
+    profile = None
+
+    if phone:
+        db = SessionLocal()
+        try:
+            profile = (
+                db.query(UserProfile)
+                .filter(UserProfile.whatsapp_number == phone)
+                .order_by(UserProfile.created_at.desc())
+                .first()
+            )
+
+            if profile:
+                personality_stage = profile.personality_stage or "profiling"
+                user_profile_dict = {
+                    "full_name": profile.full_name,
+                    "age": profile.age,
+                    "gender": profile.gender,
+                    "height_cm": profile.height_cm,
+                    "weight_kg": profile.weight_kg,
+                    "diseases": profile.diseases or [],
+                    "allergies": profile.allergies or [],
+                }
+        except Exception:
+            logging.exception("[WHATSAPP] Error cargando perfil de usuario para %s", phone)
+        finally:
+            db.close()
+
+    chain = get_user_chain(
+        phone,
+        user_profile=user_profile_dict,
+        personality_stage=personality_stage,
+        personality_profile=(profile.personality_profile if profile else None),
+    )
+    response = chain.predict(input=user_message).strip()
+
+    # Si estamos en fase de perfilamiento, contar mensajes y decidir si cambiamos a 'daily'
+    if phone and profile and personality_stage == "profiling":
+        db = SessionLocal()
+        try:
+            total_msgs = (
+                db.query(WhatsAppMessage)
+                .filter(WhatsAppMessage.phone == phone)
+                .count()
+            )
+
+            # Umbral simple: si ya hubo suficientes turnos, generamos resumen
+            if total_msgs >= 12 and profile.personality_profile is None:
+                # Construir historial simple usuario/Victoria
+                msgs = (
+                    db.query(WhatsAppMessage)
+                    .filter(WhatsAppMessage.phone == phone)
+                    .order_by(WhatsAppMessage.created_at.asc())
+                    .all()
+                )
+
+                history_lines = []
+                for m in msgs:
+                    prefix = "Usuario" if m.direction == "in" else "Victoria"
+                    history_lines.append(f"{prefix}: {m.message}")
+
+                history_text = "\n".join(history_lines[-40:])  # últimos 40 mensajes como contexto
+
+                try:
+                    summary = summarize_personality(history_text, user_profile_dict or {})
+                    profile.personality_profile = summary
+                    profile.personality_stage = "daily"
+                    db.add(profile)
+                    db.commit()
+                    logging.info("[WHATSAPP] Perfil de personalidad generado para %s", phone)
+                except Exception:
+                    db.rollback()
+                    logging.exception("[WHATSAPP] Error generando resumen de personalidad para %s", phone)
+        finally:
+            db.close()
+
+    return response
 
 
 def send_whatsapp_message(phone: str, text: str) -> dict:

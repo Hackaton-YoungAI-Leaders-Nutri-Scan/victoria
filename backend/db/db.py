@@ -1,6 +1,6 @@
 from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session, Mapped, mapped_column, relationship
 from sqlalchemy import create_engine, Integer, String, DateTime, Boolean, ForeignKey
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 import os
 from datetime import datetime
 from dotenv import load_dotenv
@@ -59,6 +59,12 @@ class UserProfile(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )
+
+    # Fase del acompañamiento de Victoria: 'profiling' (test de personalidad) o 'daily' (seguimiento diario)
+    personality_stage: Mapped[str] = mapped_column(String(32), default="profiling", nullable=False)
+
+    # Resumen estructurado de personalidad/hábitos generado por IA (JSON)
+    personality_profile: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     food_registers = relationship("FoodRegister", back_populates="user_profile")
 
