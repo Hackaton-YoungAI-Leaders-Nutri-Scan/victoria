@@ -3,8 +3,6 @@ from flask_cors import CORS
 import json
 import os
 import logging
-from detector_image import detectar_auto
-from detector_audio import transcribir_audio
 from dotenv import load_dotenv
 from datetime import datetime
 
@@ -12,13 +10,16 @@ from utils.gcp import upload_image_to_gcp
 from utils.whatsapp import build_whatsapp_reply, send_whatsapp_message, download_whatsapp_media
 from db.db import WhatsAppMessage, SessionLocal, init_db
 
+from utils.ai.detector_image import detectar_auto
+from utils.ai.detector_audio import transcribir_audio
+
 load_dotenv()
 init_db()
 
 logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
-CORS(app)  # CORS básico para permitir peticiones desde el frontend (por defecto permite todos los orígenes)
+CORS(app)
 
 @app.route("/api/whatsapp/webhook", methods=["GET", "POST"])
 def whatsapp_webhook():
