@@ -1,3 +1,10 @@
+name: CI - Backend tests
+
+on:
+  push:
+    branches: [ main, master, johnmolano ]
+  pull_request:
+    branches: [ main ]
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
