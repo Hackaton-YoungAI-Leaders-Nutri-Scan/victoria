@@ -46,7 +46,7 @@ class _FakeLLM:
 def patch_llm_and_clear_sessions(monkeypatch):
     """Parchea dependencias externas de LangChain y limpia sesiones.
 
-    - Reemplaza ChatGoogleGenerativeAI por un LLM falso que no hace llamadas externas.
+    - Reemplaza ChatGoogleGenerativeAI por un LLM falso que no hace llamadas externas
     - Reemplaza ConversationSummaryBufferMemory por una clase de memoria mínima que
       acepta cualquier LLM (evitando validaciones de tipo de Pydantic) y no realiza
       trabajo real, ya que las pruebas solo inspeccionan el prompt.
