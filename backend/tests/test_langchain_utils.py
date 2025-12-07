@@ -96,8 +96,8 @@ def test_get_user_chain_uses_profile_prompt_by_default():
     # Verificamos que el template base corresponde al de perfilamiento
     assert "TU OBJETIVO ACTUAL:" in template
     assert "Realizar una \"entrevista casual\"" in template
-    # Y que ya se inyectó el nombre del usuario
-    assert "Juan Perez" in template
+    # El nombre se pasa vía partial_variables de PromptTemplate
+    assert chain.prompt.partial_variables["full_name"] == "Juan Perez"
     # Aseguramos que NO está usando el prompt diario
     assert "Tu objetivo ahora NO es seguir investigando su personalidad" not in template
 
@@ -125,8 +125,8 @@ def test_get_user_chain_uses_daily_prompt_when_stage_daily():
     # Verificamos que el template base corresponde al de seguimiento diario
     assert "Tu objetivo ahora NO es seguir investigando su personalidad" in template
     assert "RESUMEN DE PERSONALIDAD Y HÁBITOS" in template
-    # Y que el nombre se haya inyectado
-    assert "Ana" in template
+    # El nombre se pasa vía partial_variables de PromptTemplate
+    assert chain.prompt.partial_variables["full_name"] == "Ana"
 
 
 def test_summarize_personality_parses_valid_json():
