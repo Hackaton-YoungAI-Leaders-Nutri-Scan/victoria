@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Victoria",
+    "slug": "victoria-app",
+    "icon": "./assets/icon.png",
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    }
+  }
+}
