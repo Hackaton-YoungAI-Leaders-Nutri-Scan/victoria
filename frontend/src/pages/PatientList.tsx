@@ -5,6 +5,7 @@ import { Search, MoreVertical, User, Bell, Shield, HelpCircle, LogOut, Plus, Che
 import { BottomNav } from '../components/BottomNav';
 import { getUserData } from 'src/utils/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { clearUserData } from '../utils/storage';
 
 const patients = [
   {
@@ -54,6 +55,11 @@ useEffect(() => {
   loadProfileImage();
 }, []);
 
+  const handleLogout = async () => {
+    await clearUserData();
+    navigation.navigate('Welcome');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -61,13 +67,6 @@ useEffect(() => {
         <View style={{ width: 40 }} />
         <Text style={styles.headerTitle}>Pacientes</Text>
         <View style={styles.headerAction}>
-            <View style={styles.avatarPlaceholder}>
-                {profileImage ? (
-                  <Image source={{ uri: profileImage }} style={styles.avatar} />
-                ) : (
-                  <User color="#475569" size={24} />
-                )}
-            </View>
         </View>
       </View>
 
@@ -109,7 +108,7 @@ useEffect(() => {
                 { Icon: Bell, label: 'Notificaciones' },
                 { Icon: Shield, label: 'Privacidad y Seguridad' },
                 { Icon: HelpCircle, label: 'Ayuda y Soporte' },
-                { Icon: LogOut, label: 'Cerrar Sesión', color: '#ef4444', onPress: () => navigation.navigate('Welcome') }
+                { Icon: LogOut, label: 'Cerrar Sesión', color: '#ef4444', onPress: handleLogout }
             ].map((item, i) => (
                 <TouchableOpacity 
                     key={i} 
