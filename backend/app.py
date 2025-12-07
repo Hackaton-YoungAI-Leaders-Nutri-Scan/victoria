@@ -1,217 +1,24 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from PIL import Image
-import io
 import json
 import os
-import requests
 import logging
-from datetime import datetime
-from sqlalchemy import create_engine, Integer, String, DateTime
-from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session, Mapped, mapped_column
-from google.cloud import storage
 from detector_image import detectar_auto
 from detector_audio import transcribir_audio
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.prompts import PromptTemplate
-from langchain.memory import ConversationSummaryBufferMemory
-from langchain.chains import ConversationChain
 from dotenv import load_dotenv
+from datetime import datetime
+
+from utils.gcp import upload_image_to_gcp
+from utils.whatsapp import build_whatsapp_reply, send_whatsapp_message, download_whatsapp_media
+from db.db import WhatsAppMessage, SessionLocal, init_db
+
+load_dotenv()
+init_db()
 
 logging.basicConfig(level=logging.INFO)
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-engine = create_engine(DATABASE_URL, echo=False, future=True)
-SessionLocal = scoped_session(sessionmaker(bind=engine, autoflush=False, autocommit=False))
-Base = declarative_base()
-
 app = Flask(__name__)
 CORS(app)  # CORS básico para permitir peticiones desde el frontend (por defecto permite todos los orígenes)
-
-USER_SESSIONS = {}
-
-## LANGCHAIN CONFIG
-prompt_template = PromptTemplate(
-    input_variables=["input", "history"],
-    template="""
-Eres Nutri-Scan, un asistente experto en nutrición clínica y educación alimentaria.
-Tu tarea es responder mensajes de WhatsApp de forma:
-
-- Breve
-- Clara
-- Amigable
-- Basada en evidencia
-- Sin usar jerga médica innecesaria
-- Sin dar diagnósticos médicos
-
-Historial resumido de la conversación:
-{history}
-
-Mensaje del usuario:
-"{input}"
-"""
-)
-## LANGCHAIN
-
-def get_user_chain(user_id: str) -> ConversationChain:
-    """
-    Devuelve la cadena (LLM + memoria) asociada a un usuario.
-    Si no existe, la crea.
-    """
-    if user_id not in USER_SESSIONS:
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
-            temperature=0.7
-        )
-
-        memory = ConversationSummaryBufferMemory(
-            llm=llm,
-            max_token_limit=512,
-            return_messages=True
-        )
-
-        chain = ConversationChain(
-            llm=llm,
-            memory=memory,
-            verbose=False
-        )
-
-        USER_SESSIONS[user_id] = chain
-
-    return USER_SESSIONS.get(user_id)
-
-class WhatsAppMessage(Base):
-    __tablename__ = "whatsapp_messages"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    phone: Mapped[str] = mapped_column(String(32), index=True, nullable=False)
-    message: Mapped[str] = mapped_column(String(4096), nullable=False)
-    direction: Mapped[str] = mapped_column(String(8), nullable=False)  # 'in' o 'out'
-    media_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
-    media_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    media_type: Mapped[str | None] = mapped_column(String(16), nullable=True)  # 'image', 'audio', etc.
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "phone": self.phone,
-            "message": self.message,
-            "direction": self.direction,
-            "media_url": self.media_url,
-            "media_id": self.media_id,
-            "media_type": self.media_type,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-        }
-
-
-def init_db():
-    Base.metadata.create_all(bind=engine)
-
-# Inicializar la base de datos al cargar la aplicación
-init_db()
-
-def build_whatsapp_reply(user_message: str, phone: str) -> str:
-    """Genera la respuesta nutricional para WhatsApp usando PromptTemplate."""
-    chain = get_user_chain(phone)
-    response = chain.predict(input=user_message)
-
-    return response.strip()
-
-
-def send_whatsapp_message(phone: str, text: str) -> dict:
-    """Envía un mensaje de texto usando WhatsApp Cloud API.
-
-    Requiere las variables de entorno:
-    - WHATSAPP_ACCESS_TOKEN
-    - WHATSAPP_PHONE_NUMBER_ID
-    """
-
-    access_token = os.getenv("WHATSAPP_ACCESS_TOKEN")
-    phone_number_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
-
-    if not access_token or not phone_number_id:
-        return {"error": "Faltan WHATSAPP_ACCESS_TOKEN o WHATSAPP_PHONE_NUMBER_ID"}
-
-    url = f"https://graph.facebook.com/v17.0/{phone_number_id}/messages"
-
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json",
-    }
-
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": phone,
-        "type": "text",
-        "text": {"body": text},
-    }
-
-    try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=10)
-        return {"status_code": resp.status_code, "response": resp.json()}
-    except Exception as e:
-        return {"error": str(e)}
-
-
-def download_whatsapp_media(media_id: str) -> bytes | None:
-    """Descarga el binario de un media de WhatsApp Cloud API usando su media_id.
-
-    1) GET https://graph.facebook.com/v17.0/{media_id} para obtener la URL.
-    2) GET a esa URL con el mismo Bearer token para obtener los bytes.
-    """
-
-    access_token = os.getenv("WHATSAPP_ACCESS_TOKEN")
-    if not access_token:
-        logging.error("[WHATSAPP MEDIA] Falta WHATSAPP_ACCESS_TOKEN para descargar media")
-        return None
-
-    meta_url = f"https://graph.facebook.com/v17.0/{media_id}"
-    headers = {"Authorization": f"Bearer {access_token}"}
-
-    try:
-        meta_resp = requests.get(meta_url, headers=headers, timeout=10)
-        meta_resp.raise_for_status()
-        meta_data = meta_resp.json()
-        media_url = meta_data.get("url")
-        if not media_url:
-            logging.error("[WHATSAPP MEDIA] Respuesta sin URL para media_id=%s: %s", media_id, meta_data)
-            return None
-
-        bin_resp = requests.get(media_url, headers=headers, timeout=20)
-        bin_resp.raise_for_status()
-        return bin_resp.content
-    except Exception as e:
-        logging.exception("[WHATSAPP MEDIA] Error descargando media %s: %s", media_id, e)
-        return None
-
-
-def upload_image_to_gcp(image_bytes: bytes, filename: str) -> str | None:
-    """Sube una imagen a un bucket de GCP y devuelve la URL pública (si el bucket lo permite).
-
-    Requiere:
-    - GCP_BUCKET_NAME: nombre del bucket
-    - Credenciales de servicio configuradas (GOOGLE_APPLICATION_CREDENTIALS o similar)
-    """
-
-    bucket_name = os.getenv("GCP_BUCKET_NAME")
-    if not bucket_name:
-        logging.error("[GCP STORAGE] Falta GCP_BUCKET_NAME en variables de entorno")
-        return None
-
-    try:
-        client = storage.Client()
-        bucket = client.bucket(bucket_name)
-        blob = bucket.blob(filename)
-        blob.upload_from_string(image_bytes)
-
-        # Si el bucket es público o tiene acceso anónimo, esta será la URL accesible
-        return blob.public_url
-    except Exception as e:
-        logging.exception("[GCP STORAGE] Error subiendo imagen a bucket %s: %s", bucket_name, e)
-        return None
-
 
 @app.route("/api/whatsapp/webhook", methods=["GET", "POST"])
 def whatsapp_webhook():
@@ -414,7 +221,6 @@ def whatsapp_message():
     }
 
     return jsonify(response), 200
-
 
 
 @app.route("/api/whatsapp/messages/<phone>", methods=["GET"])
