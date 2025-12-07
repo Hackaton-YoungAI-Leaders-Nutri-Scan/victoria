@@ -1,13 +1,15 @@
-# Victoria / Nutri-Scan
+<img width="1196" height="177" alt="image" src="https://github.com/user-attachments/assets/4ae95e5e-4135-4a6d-8600-9281e29320a8" />
 
-Asistente de nutrición y bienestar que acompaña al usuario por WhatsApp y una app móvil.
+# VictorIA - Digital Care
+
+Asistente de nutrición y bienestar que acompaña al usuario por WhatsApp y permite monitorizar mediante la app móvil a nuestros adultos mayores.
 
 - **Frontend:** React Native (Expo, TypeScript)
 - **Backend:** Python + Flask + SQLAlchemy + PostgreSQL
 - **IA:** Google Gemini (via `langchain-google-genai`) + LangChain
 - **Mensajería:** WhatsApp Cloud API
 - **Almacenamiento:** Google Cloud Storage
-- **Infraestructura:** Docker, docker-compose, despliegue en VM (GCP) o Cloud Run (opcional)
+- **Infraestructura:** Docker, docker-compose, despliegue en VM (GCP). 
 
 ---
 
@@ -26,11 +28,12 @@ Asistente de nutrición y bienestar que acompaña al usuario por WhatsApp y una 
   - Procesa mensajes entrantes y salientes de WhatsApp.
   - Usa **LangChain + Gemini** para generar respuestas contextuales.
   - Guarda mensajes y perfiles en **PostgreSQL**.
+  - Guarda hechos importantes usando una base de datos vectorial **ChromaDB** para memoria a largo plazo usando el modelo de embeddings de Gemini.
 
 - **IA conversacional (Victoria):**
   - Fase 1: *Test de personalidad y hábitos* (perfilamiento).
   - Fase 2: *Seguimiento diario* usando el perfil aprendido.
-  - Maneja memoria de conversación por usuario con LangChain.
+  - Maneja memoria de conversación por usuario con LangChain, comprimiendo los tokens para mantener una memoria a corto plazo.
 
 ---
 
@@ -122,8 +125,6 @@ erDiagram
 
 ## Diagrama de tecnologías y protocolos de comunicación
 
-> [Ver diagrama de tecnologías en Mermaid Live](https://mermaid.live/edit#pako:eNp9VO1umzAUfRXL_ZNOJGkhpIRKk5LQddXaKSvZIi3shwsGvDg2wqZpVvWp9gh7sV0D-WilDQm49j3n3nOvP55xLBOKfZxyuYlzUmo0DyKB4FHVQ1aSIkdfFS0D-shiugyYKqRimj1KlFCOKlWRkskfDcM846JYRhi-aP3n9yPjqHNPSazRZwIkivro6qmQpxE-oizGDWmRE63A3DupSCLxRsyExCuYX7Z_9I3FWpaMHEuY3UC0D5yolbFRhxRFr9i-ThpMlp0Iz6TSWUnDL7cI3jGPc7reRvj0CHg9DQ3yWsqMUzTlskpQCClJRg_AI6XXdM0EW-4ZzRh1OBEZNJiJblY7uhkVhB1ELcbTox60iUB-DWggZr7bRRH-OJ_POuEpur8K59BSUrB-zBkVuv8uwgB5XxNF24yGM5_OkDtw7BYQTN74TcwQhcEnU3ELMpbYydtnv6NCkZ9UocOC1WioYF9Kg1zQh1zKFWpi943OjeHAgvQ3je-fehvO7e0dignnaqeo7uZOVAxrrAKagmG6lTLO_RNKU0vpUq6ofzIgw9bubliic_-8eLp8w00eWmKa0j2ReIP_Enf70AomFnTJanRZpvJayytsMIEkl9jCWckS7OuyohZe03JNzBA_G2yENew92FI-mAkpoTGReAFOQcR3Kdc7WimrLMd-SriCUVUkRNOAETgcBwjoouVUVkJjf1RHwP4zfsK-fe703KHt2vbQu3C94YVr4S1g3J4zurA9Z-TarnG-WPhXnfOsNxyMzpyzke14A8fxHM_CpNIy3Ip4l44mDI7DXXON1LfJy1-Eu1K2)
-
 ```mermaid
 flowchart TD
     subgraph UserDevice[Dispositivo del usuario]
@@ -154,12 +155,11 @@ flowchart TD
     class DB db;
 ```
 
+> [Ver modelo](https://mermaid.live/edit#pako:eNp9VO1umzAUfRXL_ZNOJGkhpIRKk5LQddXaKSvZIi3shwsGvDg2wqZpVvWp9gh7sV0D-WilDQm49j3n3nOvP55xLBOKfZxyuYlzUmo0DyKB4FHVQ1aSIkdfFS0D-shiugyYKqRimj1KlFCOKlWRkskfDcM846JYRhi-aP3n9yPjqHNPSazRZwIkivro6qmQpxE-oizGDWmRE63A3DupSCLxRsyExCuYX7Z_9I3FWpaMHEuY3UC0D5yolbFRhxRFr9i-ThpMlp0Iz6TSWUnDL7cI3jGPc7reRvj0CHg9DQ3yWsqMUzTlskpQCClJRg_AI6XXdM0EW-4ZzRh1OBEZNJiJblY7uhkVhB1ELcbTox60iUB-DWggZr7bRRH-OJ_POuEpur8K59BSUrB-zBkVuv8uwgB5XxNF24yGM5_OkDtw7BYQTN74TcwQhcEnU3ELMpbYydtnv6NCkZ9UocOC1WioYF9Kg1zQh1zKFWpi943OjeHAgvQ3je-fehvO7e0dignnaqeo7uZOVAxrrAKagmG6lTLO_RNKU0vpUq6ofzIgw9bubliic_-8eLp8w00eWmKa0j2ReIP_Enf70AomFnTJanRZpvJayytsMIEkl9jCWckS7OuyohZe03JNzBA_G2yENew92FI-mAkpoTGReAFOQcR3Kdc7WimrLMd-SriCUVUkRNOAETgcBwjoouVUVkJjf1RHwP4zfsK-fe703KHt2vbQu3C94YVr4S1g3J4zurA9Z-TarnG-WPhXnfOsNxyMzpyzke14A8fxHM_CpNIy3Ip4l44mDI7DXXON1LfJy1-Eu1K2)
 
 ---
 
 ## Diagrama de flujo conversacional (Victoria)
-
-> [Ver diagrama de flujo conversacional en Mermaid Live](https://mermaid.live/edit#pako:eNqFk29v2jAQxr-K5b3ZNLeQQJYmlSalQDuktM0gDG0JQi4xiQexI9sp7Uq_-5wEaDc6LW_yx_f87u65yxNc8IRAFy7XfLPIsFAg7McM6GsSTWSJBeWAMDDNsJJeUczAycnn7TVhEv8kICFAkQfFQQvQHKc6rgVwmVC-BVMv2mtAb83LBHjBcNaQp15NmZK7jPMV-BKGwTiOWQsXtLWpRLgoWpvmdFvposs1litwgRcrwhJNaTiyvEsFLjIQELGk6-ZjdWlJlQH4QRTDHhYpFmAiiQgE13FE5yq4APtUc1bmd0TEcPZC8IMaMA69q0HkEyJAQYTkDK-pepxLpZutKDWPshTcS5Bgun7cIXSVR0UOvRd8za1NOCC2IDAiXWBeqMrXom4J55QwxXWqYHR7OfQHc32_DsJ5OLgOfC8czN5i1pVonnng0WqOmtL3hv73NxgvlMBonOtFPmZpL8OUgY_giuSU0VfJAnMXdtSv36tPRtr5EZFFSbRZVUPf6EJxQXFt8_H8JJWKsIU-P57i7dXwJrrSu5joOea73dO-CMxUNQa9d4dZ5kRKPRz5qtbRnnI7CQ8Ysa_t__pGWUP6F9H7gEuVCjL-6n_4M2h4s4s58qSpYDy46UcDdk__Sv_P_6QS1MrJHrTQ_4HskyXQZhVAL8jafUfIEkkl-Iq47yzL2j2fbGiiMtcoHs5fScEETT2kMyA_QPXCoMBAgYn8HhqhKh-qG0FNz6h_UWc6hwimgibQVaIkCOZE5Lh6hU8VPIYqIzmJoasftbmrGMbsWWsKzH5wnu9lgpdpBt0lXkv9VhYJVqRPsd6B_PBVaNuI6PGSKeh2OzUDuk_wAbqm-enUtk2n0zWcjmFaZyaCj9C1jFO707Ud07Ha9pnTtZ8R_FVnNU7blmM5Rtuw23a703U6z78BOiOLMw)
 
 ```mermaid
 flowchart TD
@@ -194,6 +194,8 @@ flowchart TD
     classDef step fill:#eef,stroke:#555,stroke-width:1px;
     class U,WA,API,LP,STAGE,P1,P2,LC,R,SEND,LOGIN,LOGOUT,DB step;
 ```
+
+> [Ver modelo](https://mermaid.live/edit#pako:eNqFk29v2jAQxr-K5b3ZNLeQQJYmlSalQDuktM0gDG0JQi4xiQexI9sp7Uq_-5wEaDc6LW_yx_f87u65yxNc8IRAFy7XfLPIsFAg7McM6GsSTWSJBeWAMDDNsJJeUczAycnn7TVhEv8kICFAkQfFQQvQHKc6rgVwmVC-BVMv2mtAb83LBHjBcNaQp15NmZK7jPMV-BKGwTiOWQsXtLWpRLgoWpvmdFvposs1litwgRcrwhJNaTiyvEsFLjIQELGk6-ZjdWlJlQH4QRTDHhYpFmAiiQgE13FE5yq4APtUc1bmd0TEcPZC8IMaMA69q0HkEyJAQYTkDK-pepxLpZutKDWPshTcS5Bgun7cIXSVR0UOvRd8za1NOCC2IDAiXWBeqMrXom4J55QwxXWqYHR7OfQHc32_DsJ5OLgOfC8czN5i1pVonnng0WqOmtL3hv73NxgvlMBonOtFPmZpL8OUgY_giuSU0VfJAnMXdtSv36tPRtr5EZFFSbRZVUPf6EJxQXFt8_H8JJWKsIU-P57i7dXwJrrSu5joOea73dO-CMxUNQa9d4dZ5kRKPRz5qtbRnnI7CQ8Ysa_t__pGWUP6F9H7gEuVCjL-6n_4M2h4s4s58qSpYDy46UcDdk__Sv_P_6QS1MrJHrTQ_4HskyXQZhVAL8jafUfIEkkl-Iq47yzL2j2fbGiiMtcoHs5fScEETT2kMyA_QPXCoMBAgYn8HhqhKh-qG0FNz6h_UWc6hwimgibQVaIkCOZE5Lh6hU8VPIYqIzmJoasftbmrGMbsWWsKzH5wnu9lgpdpBt0lXkv9VhYJVqRPsd6B_PBVaNuI6PGSKeh2OzUDuk_wAbqm-enUtk2n0zWcjmFaZyaCj9C1jFO707Ud07Ha9pnTtZ8R_FVnNU7blmM5Rtuw23a703U6z78BOiOLMw)
 
 ---
 
