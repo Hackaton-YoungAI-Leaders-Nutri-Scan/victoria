@@ -5,11 +5,12 @@ on:
     branches: [ main, master, johnmolano ]
   pull_request:
     branches: [ main ]
+
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: sqlite:///:memory:   # DB en memoria solo para tests en CI
+      DATABASE_URL: sqlite:///:memory:
 
     steps:
       - name: Checkout repository
