@@ -1,0 +1,39 @@
+name: CI - Backend tests
+
+on:
+  push:
+    branches: [ main, master, johnmolano ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: sqlite:///:memory:
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirementsDocker.txt
+          pip install pytest pytest-cov
+
+      - name: Run backend tests with coverage
+        working-directory: backend
+        run: |
+          pytest \
+            --maxfail=1 \
+            --disable-warnings \
+            --cov=. \
+            --cov-report=term-missing \
+            --cov-fail-under=30

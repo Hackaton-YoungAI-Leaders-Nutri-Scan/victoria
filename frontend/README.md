@@ -1,4 +1,6 @@
-# Nutri-Scan Frontend (React Native + TypeScript)
+<img width="1196" height="177" alt="image" src="https://github.com/user-attachments/assets/4ae95e5e-4135-4a6d-8600-9281e29320a8" />
+
+# VictorIA (React Native + TypeScript)
 
 Aplicación móvil en **React Native (Expo) con TypeScript** que permite:
 

@@ -1,4 +1,6 @@
-# Nutri-Scan Backend (Flask)
+<img width="1196" height="177" alt="image" src="https://github.com/user-attachments/assets/4ae95e5e-4135-4a6d-8600-9281e29320a8" />
+
+# VictorIA Backend (Flask)
 
 Backend en **Python + Flask** para analizar una foto de alimento y devolver una **recomendación nutricional simulada** (VERDE / AMARILLO / ROJO) basada en el nombre del archivo de la imagen y en algunos datos del usuario.
 
