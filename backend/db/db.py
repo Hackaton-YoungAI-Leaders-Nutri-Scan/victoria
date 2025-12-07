@@ -58,6 +58,8 @@ class UserProfile(Base):
         DateTime, default=datetime.utcnow, nullable=False
     )
 
+    food_registers = relationship("FoodRegister", back_populates="user_profile")
+
     client: Mapped[Client] = relationship("Client", back_populates="profiles")
 
 
@@ -84,6 +86,47 @@ class WhatsAppMessage(Base):
             "media_type": self.media_type,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+    
+
+class FoodRegister(Base):
+    __tablename__ = "food_register"
+
+    id_registro: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+
+    user_profile_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("user_profiles.id", ondelete="CASCADE"), nullable=False
+    )
+
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    comidas: Mapped[str] = mapped_column(String(1024), nullable=False)
+    calorias: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    carbohidratos: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    proteinas: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    grasas: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    azucares: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    sal: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    user_profile = relationship("UserProfile", back_populates="food_registers")
+
+    def to_dict(self):
+        
+        return {
+            "id_registro": self.id_registro,
+            "user_profile_id": self.user_profile_id,
+            "timestamp": self.timestamp.isoformat(),
+            "comidas": self.comidas,
+            "calorias": self.calorias,
+            "carbohidratos": self.carbohidratos,
+            "proteinas": self.proteinas,
+            "grasas": self.grasas,
+            "azucares": self.azucares,
+            "sal": self.sal,
+        }
+
+
+
+
+
 
 def init_db():
     Base.metadata.create_all(bind=engine)
