@@ -3,7 +3,9 @@ from sqlalchemy import create_engine, Integer, String, DateTime, Boolean, Foreig
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 import os
 from datetime import datetime
+from dotenv import load_dotenv
 
+load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
