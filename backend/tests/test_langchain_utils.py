@@ -56,9 +56,18 @@ def patch_llm_and_clear_sessions(monkeypatch):
         def __init__(self, *args, **kwargs) -> None:
             self.kwargs = kwargs
 
+    class _FakeConversationChain:  # pragma: no cover - implementación trivial
+        def __init__(self, llm=None, memory=None, prompt=None, verbose: bool = False, *args, **kwargs) -> None:
+            # Solo necesitamos acceder a .prompt en los tests
+            self.llm = llm
+            self.memory = memory
+            self.prompt = prompt
+            self.verbose = verbose
+
     USER_SESSIONS.clear()
     monkeypatch.setattr(lc_mod, "ChatGoogleGenerativeAI", _FakeLLM)
     monkeypatch.setattr(lc_mod, "ConversationSummaryBufferMemory", _FakeMemory)
+    monkeypatch.setattr(lc_mod, "ConversationChain", _FakeConversationChain)
     yield
     USER_SESSIONS.clear()
 
