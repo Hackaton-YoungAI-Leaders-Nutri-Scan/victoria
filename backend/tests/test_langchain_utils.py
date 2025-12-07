@@ -44,15 +44,37 @@ class _FakeLLM:
 
 @pytest.fixture(autouse=True)
 def patch_llm_and_clear_sessions(monkeypatch):
-    """
-    Parchea ChatGoogleGenerativeAI por un LLM falso y limpia sesiones.
+    """Parchea dependencias externas de LangChain y limpia sesiones.
 
     - Reemplaza ChatGoogleGenerativeAI por un LLM falso que no hace llamadas externas.
     - Reemplaza ConversationSummaryBufferMemory por una clase de memoria mínima que
       acepta cualquier LLM (evitando validaciones de tipo de Pydantic) y no realiza
       trabajo real, ya que las pruebas solo inspeccionan el prompt.
+    - Reemplaza ConversationChain por una implementación mínima que solo expone
+      la propiedad ``prompt`` que usan los tests.
     - Limpia USER_SESSIONS entre pruebas para evitar fugas de estado.
     """
+
+    class _FakeMemory:  # pragma: no cover - implementación trivial
+        def __init__(self, *args, **kwargs) -> None:
+            self.kwargs = kwargs
+
+    class _FakeConversationChain:  # pragma: no cover - implementación trivial
+        def __init__(
+            self,
+            llm=None,
+            memory=None,
+            prompt=None,
+            verbose: bool = False,
+            *args,
+            **kwargs,
+        ) -> None:
+            # Solo necesitamos acceder a .prompt en los tests
+            self.llm = llm
+            self.memory = memory
+            self.prompt = prompt
+            self.verbose = verbose
+
     USER_SESSIONS.clear()
     monkeypatch.setattr(lc_mod, "ChatGoogleGenerativeAI", _FakeLLM)
     monkeypatch.setattr(lc_mod, "ConversationSummaryBufferMemory", _FakeMemory)
