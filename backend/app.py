@@ -8,7 +8,7 @@ from datetime import datetime
 
 from utils.gcp import upload_image_to_gcp
 from utils.whatsapp import build_whatsapp_reply, send_whatsapp_message, download_whatsapp_media
-from db.db import WhatsAppMessage, SessionLocal, init_db
+from db.db import WhatsAppMessage, SessionLocal, init_db, Client, UserProfile
 
 from utils.ai.detector_image import detectar_auto
 from utils.ai.detector_audio import transcribir_audio
@@ -237,6 +237,83 @@ def get_whatsapp_messages(phone: str):
         return jsonify([m.to_dict() for m in msgs]), 200
     except Exception as e:
         logging.exception("[WHATSAPP MESSAGES] Error consultando historial para %s: %s", phone, e)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
+
+@app.route("/api/client/register", methods=["POST"])
+def register_client():
+    """Registra un nuevo cliente y su perfil de usuario.
+
+    Espera un JSON con la estructura (ejemplo):
+    {
+      "external_id": "google-sub-123",   # opcional
+      "provider": "google",              # opcional
+      "profile": {
+        "profile_photo_url": "https://...",
+        "full_name": "Nombre Apellido",
+        "age": 25,
+        "gender": "Masculino" | "Femenino" | "Otro",
+        "whatsapp_number": "573001112233",
+        "rh": "O+",
+        "height_cm": 175,
+        "weight_kg": 70,
+        "diseases": ["Hipertensión", "Diabetes"],
+        "allergies": ["Maní", "Lácteos"],
+        "accepted_terms": true
+      }
+    }
+    """
+
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "Se requiere un cuerpo JSON"}), 400
+
+    profile_data = data.get("profile") or {}
+
+    full_name = profile_data.get("full_name")
+    whatsapp_number = profile_data.get("whatsapp_number")
+    accepted_terms = profile_data.get("accepted_terms", False)
+
+    if not full_name or not whatsapp_number:
+        return jsonify({"error": "Faltan 'full_name' o 'whatsapp_number' en el perfil"}), 400
+
+    db = SessionLocal()
+    try:
+        client = Client(
+            external_id=data.get("external_id"),
+            provider=data.get("provider"),
+        )
+        db.add(client)
+        db.flush()  # para obtener client.id
+
+        profile = UserProfile(
+            client_id=client.id,
+            profile_photo_url=profile_data.get("profile_photo_url"),
+            full_name=full_name,
+            age=profile_data.get("age"),
+            gender=profile_data.get("gender"),
+            whatsapp_number=whatsapp_number,
+            rh=profile_data.get("rh"),
+            height_cm=profile_data.get("height_cm"),
+            weight_kg=profile_data.get("weight_kg"),
+            diseases=profile_data.get("diseases") or [],
+            allergies=profile_data.get("allergies") or [],
+            accepted_terms=bool(accepted_terms),
+        )
+        db.add(profile)
+        db.commit()
+
+        return jsonify(
+            {
+                "client_id": client.id,
+                "profile_id": profile.id,
+                "message": "Cliente y perfil creados correctamente",
+            }
+        ), 201
+    except Exception as e:
+        db.rollback()
+        logging.exception("[CLIENT REGISTER] Error creando cliente/perfil: %s", e)
         return jsonify({"error": str(e)}), 500
     finally:
         db.close()
