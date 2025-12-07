@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Modal, Alert, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, Camera, User, Cake, Smartphone } from 'lucide-react-native';
+import { ChevronLeft, Camera, User, Cake, Smartphone, Droplet, Ruler, Weight } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { BACKEND_BASE_URL } from 'src/config/api';
 
 const DISEASE_OPTIONS = [
   'Hipertensión',
@@ -177,8 +178,9 @@ export const PersonalData: React.FC = () => {
         Alert.alert("Formulario incompleto", "Por favor revisa los errores.");
         return;
       }
+      console.log(`${BACKEND_BASE_URL}/client/register`);
 
-      const response = await fetch("/api/client/register", {
+      const response = await fetch(`${BACKEND_BASE_URL}/client/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -201,6 +203,7 @@ export const PersonalData: React.FC = () => {
     } catch (error) {
       console.error("Error en fetch:", error);
       Alert.alert("Error", "No se pudo conectar con el servidor.");
+      navigation.navigate("ConnectionSuccess");
     }
   };
 
@@ -323,7 +326,11 @@ export const PersonalData: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>RH</Text>
-              <TextInput
+              <View style={styles.inputContainer}>
+                <View style={styles.inputIcon}>
+                  <Droplet color="#9ca3af" size={20} />
+                </View>
+                <TextInput
                 placeholder="Ej: O+"
                 placeholderTextColor="#9ca3af"
                 style={styles.input}
@@ -332,7 +339,7 @@ export const PersonalData: React.FC = () => {
                 onChangeText={setRh}
               />
               {errors.rh && <Text style={styles.errorText}>{errors.rh}</Text>}
-
+              </View>
             </View>
 
             
@@ -340,6 +347,9 @@ export const PersonalData: React.FC = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Estatura (cm)</Text>
               <View style={styles.inputContainer}>
+                <View style={styles.inputIcon}>
+                  <Ruler color="#9ca3af" size={20} />
+                </View>
                 <TextInput
                   keyboardType="numeric"
                   placeholder="Introduce tu estatura en centímetros"
@@ -355,6 +365,9 @@ export const PersonalData: React.FC = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Peso (kg)</Text>
               <View style={styles.inputContainer}>
+                <View style={styles.inputIcon}>
+                  <Weight color="#9ca3af" size={20} />
+                </View>
                 <TextInput
                   keyboardType="numeric"
                   placeholder="Introduce tu peso en kilogramos"
@@ -511,6 +524,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f6f7f8',
     paddingTop: 20,
+    paddingBottom: 20,
   },
   keyboardAvoid: {
     flex: 1,

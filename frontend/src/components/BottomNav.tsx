@@ -41,13 +41,6 @@ export const BottomNav: React.FC = () => {
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={styles.tab}
-        >
-          <MessageCircle size={24} color="#9ca3af" />
-          <Text style={styles.label}>Chat</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
           onPress={() => navigateTo('PatientList')}
           style={styles.tab}
         >
@@ -72,7 +65,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
-    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+    paddingBottom: 20,
   },
   content: {
     flexDirection: 'row',

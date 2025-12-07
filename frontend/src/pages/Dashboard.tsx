@@ -101,25 +101,30 @@ export const Dashboard: React.FC = () => {
             </View>
         </View>
 
-        {/* Quick Stats Carousel */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.carousel} contentContainerStyle={styles.carouselContent}>
-            {[
-                { Icon: Droplet, label: 'Hidratación', val: '1.5L / 2L' },
-                { Icon: Utensils, label: 'Comidas', val: '2 / 3' },
-                { Icon: Footprints, label: 'Actividad', val: '3,450 pasos' },
-                { Icon: Smile, label: 'Ánimo', val: 'Bueno' },
-            ].map((stat, i) => (
-                <View key={i} style={styles.statCard}>
-                    <View style={styles.statIconBg}>
-                        <stat.Icon size={32} color="#1392ec" />
-                    </View>
-                    <View>
-                        <Text style={styles.statLabel}>{stat.label}</Text>
-                        <Text style={styles.statValue}>{stat.val}</Text>
-                    </View>
-                </View>
-            ))}
-        </ScrollView>
+       {/* Carrusel Corregido */}
+       <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.carousel}
+        contentContainerStyle={styles.carouselContent} // Usamos el estilo correcto
+      >
+        {[
+          { Icon: Droplet, label: 'Hidratación', val: '1.5L / 2L' },
+          { Icon: Utensils, label: 'Comidas', val: '2 / 3' },
+          { Icon: Footprints, label: 'Actividad', val: '3,450 pasos' },
+          { Icon: Smile, label: 'Ánimo', val: 'Bueno' },
+        ].map((stat, i) => (
+          <View key={i} style={styles.statCard}>
+            <View style={styles.statIconBg}>
+              <stat.Icon size={32} color="#1392ec" />
+            </View>
+            <View>
+              <Text style={styles.statLabel}>{stat.label}</Text>
+              <Text style={styles.statValue}>{stat.val}</Text>
+            </View>
+          </View>
+        ))}
+      </ScrollView>
 
         {/* Recent Activity */}
         <View style={styles.section}>
@@ -200,6 +205,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f6f7f8',
+    paddingTop: 20,
+    paddingBottom: 20,
   },
   header: {
     padding: 16,
@@ -278,17 +285,22 @@ const styles = StyleSheet.create({
   },
   carousel: {
     paddingLeft: 16,
-    paddingBottom: 16,
+    // Asegura que el ScrollView tenga suficiente espacio para ser visible
+    minHeight: 180, 
   },
   carouselContent: {
+    // Necesario para que el último elemento tenga el mismo padding que el primero
     paddingRight: 16,
-    gap: 12,
   },
   statCard: {
-    minWidth: 140,
+    // Solución clave: Evita que la tarjeta se expanda para ocupar todo el ancho del ScrollView
+    width: 160,
+    flexGrow: 0, 
     backgroundColor: 'white',
+    marginBottom: 16,
     padding: 12,
     borderRadius: 12,
+    marginRight: 12,
     gap: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
