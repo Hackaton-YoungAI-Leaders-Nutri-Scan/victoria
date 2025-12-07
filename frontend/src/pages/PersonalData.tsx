@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, KeyboardAvoidingView, Platform, Modal, Alert, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChevronLeft, Camera, User, Cake, Smartphone, Droplet, Ruler, Weight } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { BACKEND_BASE_URL } from 'src/config/api';
@@ -118,7 +119,9 @@ export const PersonalData: React.FC = () => {
     });
 
     if (!result.canceled) {
-      setProfilePhoto(result.assets[0].uri);
+      const imageUri = result.assets[0].uri;
+      await AsyncStorage.setItem('profile_photo_url', imageUri);
+      setProfilePhoto(imageUri);
     }
   };
 
@@ -136,7 +139,9 @@ export const PersonalData: React.FC = () => {
     });
 
     if (!result.canceled) {
-      setProfilePhoto(result.assets[0].uri);
+      const imageUri = result.assets[0].uri;
+      await AsyncStorage.setItem('profile_photo_url', imageUri);
+      setProfilePhoto(imageUri);
     }
   };
 
@@ -154,6 +159,7 @@ export const PersonalData: React.FC = () => {
 
     // Función de registro que usará fetch
   const registerUser = async () => {
+    await AsyncStorage.setItem('full_name', fullName);
     const payload = {
       "external_id": "google-sub-123",
       "provider": "google",
@@ -178,27 +184,44 @@ export const PersonalData: React.FC = () => {
         Alert.alert("Formulario incompleto", "Por favor revisa los errores.");
         return;
       }
-      console.log(`${BACKEND_BASE_URL}/client/register`);
 
-      const response = await fetch(`${BACKEND_BASE_URL}/client/register`, {
+      const response = await fetch(`${BACKEND_BASE_URL}/api/client/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload), // ← aquí va el objeto que tú reemplazarás más adelante
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
+        console.error("Error en fetch:", errors);
         Alert.alert("Error", "Hubo un problema al registrar el usuario.");
         return;
       }
 
       const data = await response.json();
-      console.log("Respuesta del backend:", data);
 
+      const { client_id, profile_id } = data;
+
+      try {
+        await AsyncStorage.setItem('client_id', client_id.toString());
+        await AsyncStorage.setItem('profile_id', profile_id.toString());
+        const savedClientId = await AsyncStorage.getItem('client_id');
+        const savedProfileId = await AsyncStorage.getItem('profile_id');
+        const savedFullName = await AsyncStorage.getItem('full_name');
+        const savedProfilePhotoUrl = await AsyncStorage.getItem('profile_photo_url');
+        if (savedClientId && savedProfileId && savedFullName && savedProfilePhotoUrl) {
+          console.log('User data saved successfully');
+        }
+      } catch (error) {
+        console.error('Error retrieving data:', error);
+      }
+
+      // Navigate to success screen
+      navigation.navigate("ConnectionSuccess", { client_id, profile_id });
 
       // Aquí conectas tu fetch o navegación
-      navigation.navigate("ConnectionSuccess");
+      navigation.navigate("ConnectionSuccess", { client_id, profile_id });
 
     } catch (error) {
       console.error("Error en fetch:", error);
