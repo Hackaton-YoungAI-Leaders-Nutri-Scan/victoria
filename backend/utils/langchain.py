@@ -1,9 +1,9 @@
 import json
 
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.prompts import PromptTemplate
-from langchain.memory import ConversationSummaryBufferMemory
 from langchain.chains import ConversationChain
+from langchain.memory import ConversationSummaryBufferMemory
+from langchain_core.prompts import PromptTemplate
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 USER_SESSIONS = {}
 
@@ -89,7 +89,8 @@ def get_user_chain(
     personality_stage: str = "profiling",
     personality_profile: dict | None = None,
 ) -> ConversationChain:
-    """Devuelve la cadena (LLM + memoria) asociada a un usuario.
+    """
+    Devuelve la cadena (LLM + memoria) asociada a un usuario.
 
     Ahora acepta un `user_profile` opcional con claves como:
     {
@@ -102,7 +103,6 @@ def get_user_chain(
       "allergies": list[str]
     }
     """
-
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.0-flash",
         temperature=0.6,
@@ -130,13 +130,20 @@ def get_user_chain(
 
     likes = ", ".join(food_prefs.get("likes", []) or []) or "sin datos claros"
     dislikes = ", ".join(food_prefs.get("dislikes", []) or []) or "sin datos claros"
-    emotional_triggers = ", ".join(food_prefs.get("emotional_eating_triggers", []) or []) or "sin datos claros"
+    emotional_triggers = (
+        ", ".join(food_prefs.get("emotional_eating_triggers", []) or [])
+        or "sin datos claros"
+    )
     activity_level = activity.get("level", "desconocido")
     hobbies = ", ".join(activity.get("hobbies", []) or []) or "sin datos claros"
     platforms = ", ".join(content.get("platforms", []) or []) or "sin datos claros"
     mood_baseline = personality_profile.get("mood_baseline", "desconocido")
 
-    template_to_use = PROFILE_PROMPT_TEMPLATE if personality_stage == "profiling" else DAILY_PROMPT_TEMPLATE
+    template_to_use = (
+        PROFILE_PROMPT_TEMPLATE
+        if personality_stage == "profiling"
+        else DAILY_PROMPT_TEMPLATE
+    )
 
     prompt = PromptTemplate(
         input_variables=["history", "input"],
@@ -185,7 +192,8 @@ def get_user_chain(
 
 
 def summarize_personality(history: str, user_profile: dict | None = None) -> dict:
-    """Genera un resumen estructurado de personalidad/hábitos a partir del historial.
+    """
+    Genera un resumen estructurado de personalidad/hábitos a partir del historial.
 
     Devuelve SIEMPRE un dict con la forma:
     {
@@ -195,7 +203,6 @@ def summarize_personality(history: str, user_profile: dict | None = None) -> dic
       "mood_baseline": str
     }
     """
-
     if user_profile is None:
         user_profile = {}
 
@@ -242,7 +249,9 @@ Recuerda: responde SOLO el JSON.
 """
 
     diseases = ", ".join(user_profile.get("diseases", []) or []) or "Ninguna reportada"
-    allergies = ", ".join(user_profile.get("allergies", []) or []) or "Ninguna reportada"
+    allergies = (
+        ", ".join(user_profile.get("allergies", []) or []) or "Ninguna reportada"
+    )
 
     prompt = summary_template.format(
         full_name=user_profile.get("full_name", "Usuario"),

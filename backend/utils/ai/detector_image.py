@@ -1,14 +1,13 @@
-import os
 import base64
+import os
 from io import BytesIO
-from PIL import Image
+
 from dotenv import load_dotenv
-
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
+from PIL import Image
 
-
-load_dotenv()   
+load_dotenv()
 
 
 def detectar(image_bytes, mime_type="image/jpeg"):
@@ -18,9 +17,7 @@ def detectar(image_bytes, mime_type="image/jpeg"):
 
     try:
         llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
-            api_key=GEMINI_API_KEY,
-            temperature=0.1
+            model="gemini-2.5-flash", api_key=GEMINI_API_KEY, temperature=0.1
         )
 
         prompt = """
@@ -59,10 +56,8 @@ JSON:
                 {"type": "text", "text": prompt},
                 {
                     "type": "image_url",
-                    "image_url": {
-                        "url": f"data:{mime_type};base64,{encoded_image}"
-                    }
-                }
+                    "image_url": {"url": f"data:{mime_type};base64,{encoded_image}"},
+                },
             ]
         )
 
@@ -90,7 +85,7 @@ def detectar_auto(image_bytes):
             "PNG": "image/png",
             "WEBP": "image/webp",
             "GIF": "image/gif",
-            "BMP": "image/bmp"
+            "BMP": "image/bmp",
         }
 
         mime_type = mime_map.get(image.format, "image/jpeg")

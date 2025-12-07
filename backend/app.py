@@ -1,17 +1,21 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 import json
-import os
 import logging
-from dotenv import load_dotenv
+import os
 from datetime import datetime
 
-from utils.gcp import upload_image_to_gcp
-from utils.whatsapp import build_whatsapp_reply, send_whatsapp_message, download_whatsapp_media
-from db.db import WhatsAppMessage, SessionLocal, init_db, Client, UserProfile
+from dotenv import load_dotenv
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 
-from utils.ai.detector_image import detectar_auto
+from db.db import Client, SessionLocal, UserProfile, WhatsAppMessage, init_db
 from utils.ai.detector_audio import transcribir_audio
+from utils.ai.detector_image import detectar_auto
+from utils.gcp import upload_image_to_gcp
+from utils.whatsapp import (
+    build_whatsapp_reply,
+    download_whatsapp_media,
+    send_whatsapp_message,
+)
 
 load_dotenv()
 init_db()
@@ -21,9 +25,11 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 CORS(app)
 
+
 @app.route("/api/whatsapp/webhook", methods=["GET", "POST"])
 def whatsapp_webhook():
-    """Endpoint básico para recibir eventos/mensajes de WhatsApp.
+    """
+    Endpoint básico para recibir eventos/mensajes de WhatsApp.
 
     - Espera un cuerpo JSON (por ejemplo, el webhook de Twilio o de la API de WhatsApp).
     - De momento solo registra/inspecciona el payload y responde 200.
@@ -49,7 +55,10 @@ def whatsapp_webhook():
         logging.exception("[WHATSAPP WEBHOOK] Error parseando JSON de la petición")
         return jsonify({"error": "Cuerpo de la petición no es JSON válido"}), 400
 
-    logging.info("[WHATSAPP WEBHOOK] Payload recibido: %s", json.dumps(payload, ensure_ascii=False))
+    logging.info(
+        "[WHATSAPP WEBHOOK] Payload recibido: %s",
+        json.dumps(payload, ensure_ascii=False),
+    )
 
     # Intentar extraer el mensaje, número y posible media (imagen/audio) siguiendo la
     # estructura típica de WhatsApp Cloud API. Si no coincide, se devuelve el
@@ -111,21 +120,29 @@ def whatsapp_webhook():
                         fname = f"whatsapp/{phone}_{ts}_{media_id}.ogg"
                         media_url = upload_image_to_gcp(audio_bytes, fname)
 
-
                         transcripcion = transcribir_audio(audio_bytes)
 
-
-                        user_message = transcripcion if transcripcion else "No se pudo transcribir el audio."
+                        user_message = (
+                            transcripcion
+                            if transcripcion
+                            else "No se pudo transcribir el audio."
+                        )
                         media_type = "audio"  # Initialize media_type variable here
 
     except Exception:
         # Si algo falla en el parseo, se mantiene user_message = None
-        logging.exception("[WHATSAPP WEBHOOK] Error extrayendo mensaje/phone del payload")
+        logging.exception(
+            "[WHATSAPP WEBHOOK] Error extrayendo mensaje/phone del payload"
+        )
 
-    user_message = reply_text if 'reply_text' in locals() else user_message
+    user_message = reply_text if "reply_text" in locals() else user_message
 
     if user_message:
-        logging.info("[WHATSAPP WEBHOOK] Mensaje de usuario detectado. from=%s body=%s", phone, user_message)
+        logging.info(
+            "[WHATSAPP WEBHOOK] Mensaje de usuario detectado. from=%s body=%s",
+            phone,
+            user_message,
+        )
         reply_text = build_whatsapp_reply(user_message, phone)
         db = SessionLocal()
 
@@ -154,12 +171,16 @@ def whatsapp_webhook():
             db.commit()
         except Exception as e:
             db.rollback()
-            logging.exception("[WHATSAPP WEBHOOK] Error guardando mensajes en BD: %s", e)
+            logging.exception(
+                "[WHATSAPP WEBHOOK] Error guardando mensajes en BD: %s", e
+            )
         finally:
             db.close()
 
         if not phone:
-            logging.warning("[WHATSAPP WEBHOOK] No se encontró número de teléfono en el payload")
+            logging.warning(
+                "[WHATSAPP WEBHOOK] No se encontró número de teléfono en el payload"
+            )
 
         return jsonify(
             {
@@ -178,7 +199,8 @@ def whatsapp_webhook():
 
 @app.route("/api/whatsapp/message", methods=["POST"])
 def whatsapp_message():
-    """Recibe un mensaje de usuario y devuelve una respuesta sencilla.
+    """
+    Recibe un mensaje de usuario y devuelve una respuesta sencilla.
 
     Espera un JSON como:
     {
@@ -186,7 +208,6 @@ def whatsapp_message():
         "phone": "+573001112233"  # opcional
     }
     """
-
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "Se requiere un cuerpo JSON"}), 400
@@ -204,14 +225,18 @@ def whatsapp_message():
     if phone:
         db = SessionLocal()
         try:
-            incoming = WhatsAppMessage(phone=phone, message=user_message, direction="in")
+            incoming = WhatsAppMessage(
+                phone=phone, message=user_message, direction="in"
+            )
             outgoing = WhatsAppMessage(phone=phone, message=reply_text, direction="out")
             db.add(incoming)
             db.add(outgoing)
             db.commit()
         except Exception as e:
             db.rollback()
-            logging.exception("[WHATSAPP MESSAGE] Error guardando mensajes en BD: %s", e)
+            logging.exception(
+                "[WHATSAPP MESSAGE] Error guardando mensajes en BD: %s", e
+            )
         finally:
             db.close()
 
@@ -236,14 +261,18 @@ def get_whatsapp_messages(phone: str):
         )
         return jsonify([m.to_dict() for m in msgs]), 200
     except Exception as e:
-        logging.exception("[WHATSAPP MESSAGES] Error consultando historial para %s: %s", phone, e)
+        logging.exception(
+            "[WHATSAPP MESSAGES] Error consultando historial para %s: %s", phone, e
+        )
         return jsonify({"error": str(e)}), 500
     finally:
         db.close()
 
+
 @app.route("/api/client/register", methods=["POST"])
 def register_client():
-    """Registra un nuevo cliente y su perfil de usuario.
+    """
+    Registra un nuevo cliente y su perfil de usuario.
 
     Espera un JSON con la estructura (ejemplo):
     {
@@ -264,7 +293,6 @@ def register_client():
       }
     }
     """
-
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "Se requiere un cuerpo JSON"}), 400
@@ -276,7 +304,9 @@ def register_client():
     accepted_terms = profile_data.get("accepted_terms", False)
 
     if not full_name or not whatsapp_number:
-        return jsonify({"error": "Faltan 'full_name' o 'whatsapp_number' en el perfil"}), 400
+        return jsonify(
+            {"error": "Faltan 'full_name' o 'whatsapp_number' en el perfil"}
+        ), 400
 
     db = SessionLocal()
     try:
