@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, CheckCircle, Lightbulb, Pill, Activity, Utensils, Bot, Download, Share2 } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SimplePieChart = () => {
     // A simplified visual representation of 85% completion
@@ -45,6 +46,7 @@ const SimplePieChart = () => {
 
 export const Report: React.FC = () => {
   const navigation = useNavigation<any>();
+  const fullName = AsyncStorage.getItem('full_name');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -58,8 +60,8 @@ export const Report: React.FC = () => {
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
-            <Text style={styles.reportTitle}>Reporte de Mayo 2024</Text>
-            <Text style={styles.patientName}>Elena García</Text>
+            <Text style={styles.reportTitle}>Reporte de Noviembre 2025</Text>
+            <Text style={styles.patientName}>{fullName}</Text>
 
             {/* Executive Summary */}
             <View style={styles.card}>
